@@ -1,0 +1,2058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BuildTrack — AI-Based Construction Management & Risk Prediction System</title>
+  <meta name="description" content="Centralized construction management platform for small and medium contractors to monitor projects, budgets, labour, materials, daily progress, and risk prediction.">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome 6 Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Toast Notifications Container -->
+  <div class="toast-notifications-container" id="toastContainer"></div>
+
+  <!-- ========================================================================
+       AUTHENTICATION OVERLAY (PROTOTYPE DEMO LOGIN & REGISTRATION)
+       ======================================================================== -->
+  <div class="auth-overlay-backdrop hidden" id="authOverlay">
+    <div class="auth-card-panel">
+      <div class="auth-header-strip">
+        <img src="assets/logo.svg" alt="BuildTrack Logo" class="auth-brand-logo">
+        <h2 style="font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em;">BuildTrack Construction OS</h2>
+        <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">AI-Based Project Management & Risk Prediction</p>
+      </div>
+
+      <div class="auth-body-container">
+        <!-- Toggle Tabs -->
+        <div class="auth-tabs-toggle">
+          <button type="button" class="auth-tab-btn active" id="tabAuthLogin">Sign In</button>
+          <button type="button" class="auth-tab-btn" id="tabAuthRegister">Create Account</button>
+        </div>
+
+        <!-- Demo Credentials Autofill Banner -->
+        <div class="demo-credentials-banner">
+          <div style="font-weight: 700; display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+            <i class="fa-solid fa-key"></i> Quick Demo Access (Click to Autofill)
+          </div>
+          <div class="demo-cred-row">
+            <span><strong>Admin / Contractor:</strong> admin@buildtrack.com / admin123</span>
+            <span class="demo-quick-fill-btn" id="fillAdminCreds">Autofill</span>
+          </div>
+          <div class="demo-cred-row">
+            <span><strong>Site Engineer:</strong> engineer@buildtrack.com / build2026</span>
+            <span class="demo-quick-fill-btn" id="fillEngineerCreds">Autofill</span>
+          </div>
+        </div>
+
+        <!-- Sign In Form -->
+        <form id="loginForm">
+          <div class="form-group-field">
+            <label class="form-label-title" for="loginEmail">Email Address <span class="required">*</span></label>
+            <input type="email" id="loginEmail" class="form-input-text" placeholder="contractor@buildtrack.com" required value="admin@buildtrack.com">
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="loginPassword">Password <span class="required">*</span></label>
+            <div class="password-input-wrapper">
+              <input type="password" id="loginPassword" class="form-input-text" placeholder="••••••••" required value="admin123">
+              <i class="fa-solid fa-eye password-toggle-eye"></i>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; margin-top: 1rem;">
+            Sign In to Construction Portal <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <!-- Registration Form -->
+        <form id="registerForm" style="display: none;">
+          <div class="form-group-field">
+            <label class="form-label-title" for="regName">Contractor / Full Name <span class="required">*</span></label>
+            <input type="text" id="regName" class="form-input-text" placeholder="Er. Vikram Shinde" required>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="regRole">Role in Firm <span class="required">*</span></label>
+            <select id="regRole" class="form-select-custom">
+              <option value="Principal Contractor">Principal Contractor</option>
+              <option value="Senior Project Manager">Senior Project Manager</option>
+              <option value="Civil Site Engineer">Civil Site Engineer</option>
+              <option value="Quantity Surveyor">Quantity Surveyor</option>
+            </select>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="regEmail">Work Email Address <span class="required">*</span></label>
+            <input type="email" id="regEmail" class="form-input-text" placeholder="engineer@buildtrack.com" required>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="regPassword">Set Password (min 6 chars) <span class="required">*</span></label>
+            <div class="password-input-wrapper">
+              <input type="password" id="regPassword" class="form-input-text" placeholder="••••••••" required minlength="6">
+              <i class="fa-solid fa-eye password-toggle-eye"></i>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; margin-top: 1rem;">
+            Register & Launch Dashboard <i class="fa-solid fa-user-plus"></i>
+          </button>
+        </form>
+
+        <p style="font-size: 0.7rem; color: var(--text-muted); text-align: center; margin-top: 1.25rem;">
+          <i class="fa-solid fa-info-circle"></i> College Mini-Project Demonstration Environment. Credentials stored in browser LocalStorage.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MAIN APPLICATION LAYOUT
+       ======================================================================== -->
+  <div class="app-layout">
+    
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar" id="mainSidebar">
+      <div class="sidebar-header">
+        <a href="#dashboard" class="brand-link">
+          <img src="assets/logo.svg" alt="BuildTrack" class="brand-logo-img">
+          <div class="brand-text-wrap">
+            <span class="brand-title">Build<span>Track</span></span>
+            <span class="brand-subtitle">AI Construction OS</span>
+          </div>
+        </a>
+        <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Collapse / Expand Sidebar">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+
+      <div class="sidebar-nav-container">
+        <!-- Section 1: Management Operations -->
+        <div class="nav-section-title">Site Operations</div>
+        <ul class="sidebar-nav-list">
+          <li>
+            <a href="#dashboard" class="nav-item-link active" data-view="dashboard">
+              <i class="fa-solid fa-gauge-high"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="#projects" class="nav-item-link" data-view="projects">
+              <i class="fa-solid fa-building"></i>
+              <span>Projects</span>
+              <span class="nav-badge badge-counter" id="sidebarProjectsBadge">5</span>
+            </a>
+          </li>
+          <li>
+            <a href="#tasks" class="nav-item-link" data-view="tasks">
+              <i class="fa-solid fa-list-check"></i>
+              <span>Tasks & Schedule</span>
+            </a>
+          </li>
+          <li>
+            <a href="#labour" class="nav-item-link" data-view="labour">
+              <i class="fa-solid fa-person-digging"></i>
+              <span>Labour & Attendance</span>
+            </a>
+          </li>
+          <li>
+            <a href="#materials" class="nav-item-link" data-view="materials">
+              <i class="fa-solid fa-cubes-stacked"></i>
+              <span>Materials & Inventory</span>
+            </a>
+          </li>
+          <li>
+            <a href="#finance" class="nav-item-link" data-view="finance">
+              <i class="fa-solid fa-indian-rupee-sign"></i>
+              <span>Finance & Payments</span>
+            </a>
+          </li>
+          <li>
+            <a href="#progress" class="nav-item-link" data-view="progress">
+              <i class="fa-solid fa-calendar-day"></i>
+              <span>Daily Progress Diary</span>
+            </a>
+          </li>
+        </ul>
+
+        <!-- Section 2: AI & Analytics -->
+        <div class="nav-section-title" style="margin-top: 1rem;">Intelligence & Audits</div>
+        <ul class="sidebar-nav-list">
+          <li>
+            <a href="#risks" class="nav-item-link" data-view="risks">
+              <i class="fa-solid fa-brain-circuit"></i>
+              <span>Risk Intelligence</span>
+              <span class="nav-badge badge-risk">AI Engine</span>
+            </a>
+          </li>
+          <li>
+            <a href="#reports" class="nav-item-link" data-view="reports">
+              <i class="fa-solid fa-file-invoice-dollar"></i>
+              <span>Reports & Analytics</span>
+            </a>
+          </li>
+        </ul>
+
+        <!-- Section 3: Configuration -->
+        <div class="nav-section-title" style="margin-top: 1rem;">Preferences</div>
+        <ul class="sidebar-nav-list">
+          <li>
+            <a href="#settings" class="nav-item-link" data-view="settings">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Settings & Profile</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- User Profile Card in Sidebar Footer -->
+      <div class="sidebar-footer">
+        <div class="sidebar-user-card">
+          <div class="user-avatar-circle">RK</div>
+          <div class="user-info-text">
+            <div class="user-display-name">Er. Rajesh Kumar</div>
+            <div class="user-role-badge">Principal Contractor</div>
+          </div>
+          <button class="user-logout-quick-btn" title="Sign Out">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT WRAPPER -->
+    <div class="main-content-wrapper">
+      
+      <!-- TOP NAVIGATION BAR -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Navigation">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+
+          <!-- Global Active Project Filter Selector -->
+          <div class="global-project-selector-wrap">
+            <i class="fa-solid fa-layer-group"></i>
+            <select id="globalProjectSelect" class="global-project-select" aria-label="Filter Active Project">
+              <option value="all">📁 All Projects (Overview)</option>
+            </select>
+          </div>
+
+          <!-- Global Search Input -->
+          <div class="global-search-bar">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="globalSearchInput" class="global-search-input" placeholder="Search tasks, materials, expenses...">
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Quick Action Dropdown ("+ New") -->
+          <div class="quick-action-dropdown-wrap">
+            <button class="btn-primary-accent" id="quickCreateBtn">
+              <i class="fa-solid fa-plus"></i>
+              <span>New Record</span>
+              <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; margin-left: 2px;"></i>
+            </button>
+            <div class="dropdown-menu-custom" id="quickCreateDropdownMenu">
+              <button class="dropdown-item-btn" onclick="ProjectsController.openAddModal()">
+                <i class="fa-solid fa-building"></i> Add New Project
+              </button>
+              <button class="dropdown-item-btn" onclick="TasksController.openAddModal()">
+                <i class="fa-solid fa-list-check"></i> Add Schedule Task
+              </button>
+              <button class="dropdown-item-btn" onclick="FinanceController.openAddExpenseModal()">
+                <i class="fa-solid fa-receipt"></i> Record Site Expense
+              </button>
+              <button class="dropdown-item-btn" onclick="LabourController.openAddModal()">
+                <i class="fa-solid fa-user-plus"></i> Enroll Worker
+              </button>
+              <button class="dropdown-item-btn" onclick="MaterialsController.openAddModal()">
+                <i class="fa-solid fa-boxes-stacked"></i> Add Material
+              </button>
+              <button class="dropdown-item-btn" onclick="ProgressController.openAddModal()">
+                <i class="fa-solid fa-clipboard-check"></i> Log Daily Site Progress
+              </button>
+            </div>
+          </div>
+
+          <!-- Notification Bell with Counter Badge -->
+          <div style="position: relative;">
+            <button class="topbar-action-btn" id="topbarNotifBtn" title="Site Alerts & Risk Notifications">
+              <i class="fa-regular fa-bell"></i>
+              <span class="notification-count-badge" id="topbarNotifBadge">4</span>
+            </button>
+            <!-- Dropdown Panel -->
+            <div class="notifications-panel-popover" id="notifDropdownPanel">
+              <div class="notif-header">
+                <span style="font-size: 0.85rem; font-weight: 700;">Early Warnings & Alerts</span>
+                <span style="font-size: 0.72rem; color: var(--accent-orange); font-weight: 600; cursor: pointer;" onclick="BuildTrack.updateNotifications()">Refresh</span>
+              </div>
+              <div class="notif-items-list" id="notifItemsList">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+
+          <!-- User Profile Pill -->
+          <div class="topbar-user-pill" id="logoutActionBtn" title="Click to Sign Out">
+            <div class="topbar-avatar">RK</div>
+            <span class="topbar-user-name">Er. Rajesh Kumar</span>
+            <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 0.8rem; color: var(--text-muted); margin-left: 2px;"></i>
+          </div>
+        </div>
+      </header>
+
+      <!-- VIEWS CONTAINER -->
+      <main class="content-area-container">
+        
+        <!-- ==================================================================
+             VIEW 1: DASHBOARD
+             ================================================================== -->
+        <section id="view-dashboard" class="view-page active">
+          <div class="page-header-row">
+            <div class="page-title-wrap">
+              <h1 class="page-title-main"><i class="fa-solid fa-gauge-high"></i> Construction Executive Dashboard</h1>
+              <span class="page-subtitle-muted">Real-time portfolio metrics, site costs, labour productivity, and early warning risk indicators</span>
+            </div>
+            <div class="page-actions-group">
+              <button class="btn btn-outline btn-sm" onclick="BuildTrack.navigateTo('reports')">
+                <i class="fa-solid fa-file-lines"></i> View Detailed Reports
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="ProgressController.openAddModal()">
+                <i class="fa-solid fa-clipboard-check"></i> Log Today's Progress
+              </button>
+            </div>
+          </div>
+
+          <!-- Early-Warning AI Risk Alert Banner -->
+          <div class="risk-engine-banner" id="dashboardRiskSummaryBanner" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+            <!-- Populated dynamically by dashboard.js -->
+          </div>
+
+          <!-- 10 SUMMARY KPI CARDS GRID -->
+          <div class="kpi-cards-grid">
+            <!-- 1. Total Projects -->
+            <div class="kpi-stat-card kpi-card-blue">
+              <div class="kpi-top-row">
+                <span class="kpi-label-text">Total Projects</span>
+                <div class="kpi-icon-badge bg-blue-soft"><i class="fa-solid fa-building"></i></div>
+              </div>
+              <div class="kpi-value-text" id="kpiTotalProjects">5</div>
+              <div class="kpi-footer-sub">Commercial & Infrastructure Sites</div>
+            </div>
+
+            <!-- 2. Ongoing Projects -->
+            <div class="kpi-stat-card kpi-card-orange">
+              <div class="kpi-top-row">
+                <span class="kpi-label-text">Ongoing Projects</span>
+                <div class="kpi-icon-badge bg-orange-soft"><i class="fa-solid fa-trowel-bricks"></i></div>
+              </div>
+              <div class="kpi-value-text" id="kpiOngoingProjects">3</div>
+              <div class="kpi-footer-sub">Active civil construction sites</div>
+            </div>
+
+            <!-- 3. Completed Projects -->
+            <div class="kpi-stat-card kpi-card-emerald">
+              <div class="kpi-top-row">
+                <span class="kpi-label-text">Completed Projects</span>
+                <div class="kpi-icon-badge bg-emerald-soft"><i class="fa-solid fa-circle-check"></i></div>
+              </div>
+              <div class="kpi-value-text" id="kpiCompletedProjects">1</div>
+              <div class="kpi-footer-sub">Handed over with snag clearance</div>
+            </div>
+
+            <!-- 4. Delayed Projects -->
+            <div class="kpi-stat-card kpi-card-rose">
+              <div class="kpi-top-row">
+                <span class="kpi-label-text">Delayed Projects</span>
+                <div class="kpi-icon-badge bg-rose-soft"><i class="fa-solid fa-triangle-exclamation"></i></div>
+              </div>
+              <div class="kpi-value-text" id="kpiDelayedProjects" style="color: var(--accent-rose);">1</div>
+              <div class="kpi-footer-sub">Requires management intervention</div>
+            </div>
+
+            <!-- 5. Total Project Budget -->
+            <div class="kpi-stat-card kpi-card-indigo">
+              <div class="kpi-top-row">
+                <span class="kpi-label-text">Total Budget</span>
+                <div class="kpi-icon-badge bg-indigo-soft"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+              </div>
+              <div class="kpi-value-text" id="kpiTotalBudget">₹4,13,00,000</div>
+              <div class="kpi-footer-sub">Authorized contractor contracts</div>
+            </div>
+
+            <!-- 6. Total Expenses -->
+            <div class="kpi-stat-card kpi-card-orange">
+              <div class="kpi-top-row">
+                <span class="kpi-label-text">Total Incurred Cost</span>
+                <div class="kpi-icon-badge bg-orange-soft"><i class="fa-solid fa-receipt"></i></div>
+              </div>
+              <div class="kpi-value-text" id="kpiTotalExpenses">₹3,13,95,000</div>
+              <div class="kpi-footer-sub">Materials, labour & plant hire</div>
+            </div>
+
+            <!-- 7. Remaining Budget -->
+            <div class="kpi-stat-card kpi-card-emerald">
+              <div class="kpi-top-row">
+                <span class="kpi-label-text">Remaining Balance</span>
+                <div class="kpi-icon-badge bg-emerald-soft"><i class="fa-solid fa-vault"></i></div>
+              </div>
+              <div class="kpi-value-text" id="kpiRemainingBudget">₹99,05,000</div>
+              <div class="kpi-footer-sub">Available working capital reserve</div>
+            </div>
+
+            <!-- 8. Active Labourers -->
+            <div class="kpi-stat-card kpi-card-blue">
+              <div class="kpi-top-row">
+                <span class="kpi-label-text">Active Labourers</span>
+                <div class="kpi-icon-badge bg-blue-soft"><i class="fa-solid fa-users"></i></div>
+              </div>
+              <div class="kpi-value-text" id="kpiActiveLabourers">10 / 12</div>
+              <div class="kpi-footer-sub">Present on duty today</div>
+            </div>
+
+            <!-- 9. Pending Tasks -->
+            <div class="kpi-stat-card kpi-card-amber">
+              <div class="kpi-top-row">
+                <span class="kpi-label-text">Pending Tasks</span>
+                <div class="kpi-icon-badge bg-amber-soft"><i class="fa-solid fa-clock"></i></div>
+              </div>
+              <div class="kpi-value-text" id="kpiPendingTasks">9</div>
+              <div class="kpi-footer-sub">In-progress or awaiting start</div>
+            </div>
+
+            <!-- 10. Low-Stock Materials -->
+            <div class="kpi-stat-card kpi-card-rose">
+              <div class="kpi-top-row">
+                <span class="kpi-label-text">Low-Stock Materials</span>
+                <div class="kpi-icon-badge bg-rose-soft"><i class="fa-solid fa-box-open"></i></div>
+              </div>
+              <div class="kpi-value-text" id="kpiLowStockMaterials" style="color: var(--accent-rose);">4</div>
+              <div class="kpi-footer-sub">Below safety threshold</div>
+            </div>
+          </div>
+
+          <!-- 6 INTERACTIVE CHART.JS CHARTS -->
+          <div class="charts-grid-two-col">
+            <!-- Chart 1: Project Budget vs Actual Expenses -->
+            <div class="card-box">
+              <div class="card-header-clean">
+                <div class="card-title-text"><i class="fa-solid fa-chart-column"></i> Budget vs Actual Spending</div>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">INR in Lakhs</span>
+              </div>
+              <div class="card-body-content">
+                <div class="chart-wrapper-box">
+                  <canvas id="chartBudgetVsExpenses"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart 2: Monthly Construction Expenses Trend -->
+            <div class="card-box">
+              <div class="card-header-clean">
+                <div class="card-title-text"><i class="fa-solid fa-chart-line"></i> Monthly Expense Burn Trend</div>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">Recent 4 Months</span>
+              </div>
+              <div class="card-body-content">
+                <div class="chart-wrapper-box">
+                  <canvas id="chartMonthlyExpenses"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="charts-grid-two-col">
+            <!-- Chart 3: Project Completion Progress -->
+            <div class="card-box">
+              <div class="card-header-clean">
+                <div class="card-title-text"><i class="fa-solid fa-bars-progress"></i> Physical Completion % by Project</div>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">Civil Milestones</span>
+              </div>
+              <div class="card-body-content">
+                <div class="chart-wrapper-box">
+                  <canvas id="chartProjectProgress"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart 4: Expense Distribution by Category -->
+            <div class="card-box">
+              <div class="card-header-clean">
+                <div class="card-title-text"><i class="fa-solid fa-chart-pie"></i> Expense Breakdown by Category</div>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">Materials, Labour, Plant</span>
+              </div>
+              <div class="card-body-content">
+                <div class="chart-wrapper-box">
+                  <canvas id="chartExpenseCategory"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="charts-grid-two-col">
+            <!-- Chart 5: Labour Attendance Overview -->
+            <div class="card-box">
+              <div class="card-header-clean">
+                <div class="card-title-text"><i class="fa-solid fa-user-check"></i> Labour Attendance Distribution</div>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">Today's Muster</span>
+              </div>
+              <div class="card-body-content">
+                <div class="chart-wrapper-box">
+                  <canvas id="chartLabourAttendance"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart 6: Material Stock vs Minimum Threshold -->
+            <div class="card-box">
+              <div class="card-header-clean">
+                <div class="card-title-text"><i class="fa-solid fa-boxes-stacked"></i> Material Stock vs Safety Threshold</div>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">Stock Buffer</span>
+              </div>
+              <div class="card-body-content">
+                <div class="chart-wrapper-box">
+                  <canvas id="chartMaterialStock"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ADDITIONAL DASHBOARD OPERATIONAL FEEDS -->
+          <div class="charts-grid-two-col" style="margin-top: 1.5rem;">
+            <!-- Upcoming Deadlines -->
+            <div class="card-box">
+              <div class="card-header-clean">
+                <div class="card-title-text"><i class="fa-regular fa-calendar-check"></i> Upcoming Project Deadlines</div>
+                <button class="btn btn-sm btn-outline" onclick="BuildTrack.navigateTo('projects')">View All</button>
+              </div>
+              <div class="card-body-content" id="dashboardDeadlinesList">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Overdue Tasks -->
+            <div class="card-box">
+              <div class="card-header-clean">
+                <div class="card-title-text" style="color: var(--accent-rose);"><i class="fa-solid fa-clock"></i> Overdue Tasks Requiring Action</div>
+                <button class="btn btn-sm btn-outline" onclick="BuildTrack.navigateTo('tasks')">View Tasks</button>
+              </div>
+              <div class="card-body-content" id="dashboardOverdueList">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+
+          <div class="charts-grid-two-col" style="margin-top: 1.5rem;">
+            <!-- Low-Stock Warnings Panel -->
+            <div class="card-box">
+              <div class="card-header-clean">
+                <div class="card-title-text"><i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-amber);"></i> Critical Inventory Depletions</div>
+                <button class="btn btn-sm btn-outline" onclick="BuildTrack.navigateTo('materials')">Restock</button>
+              </div>
+              <div class="card-body-content" id="dashboardLowStockAlerts">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Labour Availability by Project -->
+            <div class="card-box">
+              <div class="card-header-clean">
+                <div class="card-title-text"><i class="fa-solid fa-users-gear"></i> Labour Allocation by Site</div>
+                <button class="btn btn-sm btn-outline" onclick="BuildTrack.navigateTo('labour')">Manage Crew</button>
+              </div>
+              <div class="card-body-content" id="dashboardLabourAvailability">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Expenses & Disbursements Table -->
+          <div class="card-box" style="margin-top: 1.5rem;">
+            <div class="card-header-clean">
+              <div class="card-title-text"><i class="fa-solid fa-money-bill-transfer"></i> Recent Site Expenses & Vouchers</div>
+              <button class="btn btn-sm btn-outline" onclick="BuildTrack.navigateTo('finance')">Open Finance Ledger</button>
+            </div>
+            <div class="card-body-content" style="padding: 0;">
+              <div class="table-responsive-wrapper" style="border: none;">
+                <table class="data-table-custom">
+                  <thead>
+                    <tr>
+                      <th>Voucher Title</th>
+                      <th>Project</th>
+                      <th>Category</th>
+                      <th>Amount (INR)</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashboardRecentExpensesTable">
+                    <!-- Dynamically populated -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daily Progress Feed -->
+          <div class="card-box" style="margin-top: 1.5rem;">
+            <div class="card-header-clean">
+              <div class="card-title-text"><i class="fa-solid fa-book-journal-whills"></i> Live Site Diary & Daily Updates</div>
+              <button class="btn btn-sm btn-outline" onclick="BuildTrack.navigateTo('progress')">Full Site Diary</button>
+            </div>
+            <div class="card-body-content" id="dashboardDailyProgressFeed">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ==================================================================
+             VIEW 2: PROJECTS MANAGEMENT
+             ================================================================== -->
+        <section id="view-projects" class="view-page">
+          <div class="page-header-row">
+            <div class="page-title-wrap">
+              <h1 class="page-title-main"><i class="fa-solid fa-building"></i> Construction Projects Directory</h1>
+              <span class="page-subtitle-muted">Manage active construction sites, client contracts, authorized budgets, and engineering timelines</span>
+            </div>
+            <div class="page-actions-group">
+              <button class="btn btn-primary" onclick="ProjectsController.openAddModal()">
+                <i class="fa-solid fa-plus"></i> Add New Project
+              </button>
+            </div>
+          </div>
+
+          <!-- Filters & Controls Bar -->
+          <div class="card-box" style="margin-bottom: 1.5rem; padding: 1rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <input type="text" id="projectSearchInput" class="form-input-text" placeholder="Search by name, client, location..." style="width: 250px;">
+                <select id="projectStatusFilter" class="filter-pill-select">
+                  <option value="all">All Statuses</option>
+                  <option value="ongoing">Ongoing</option>
+                  <option value="planning">Planning</option>
+                  <option value="delayed">Delayed</option>
+                  <option value="completed">Completed</option>
+                </select>
+                <select id="projectSortFilter" class="filter-pill-select">
+                  <option value="name">Sort: Name (A-Z)</option>
+                  <option value="budget">Sort: Budget (High to Low)</option>
+                  <option value="deadline">Sort: Deadline (Earliest)</option>
+                  <option value="progress">Sort: Completion %</option>
+                </select>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span id="projectsCountBadge" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">5 Projects</span>
+                <div style="display: flex; border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden;">
+                  <button class="btn btn-sm btn-outline active" id="projectsViewCardsBtn" title="Grid Card View">
+                    <i class="fa-solid fa-border-all"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline" id="projectsViewTableBtn" title="List Table View">
+                    <i class="fa-solid fa-table-list"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Projects Cards Container -->
+          <div class="projects-cards-grid" id="projectsCardsContainer">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Projects Table Container (Hidden by default) -->
+          <div class="table-responsive-wrapper" id="projectsTableContainer" style="display: none; background: #ffffff;">
+            <table class="data-table-custom">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Project Name & Client</th>
+                  <th>Status</th>
+                  <th>Progress</th>
+                  <th>Authorized Budget</th>
+                  <th>Actual Spent</th>
+                  <th>Target Completion</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 3: TASKS & SCHEDULE MANAGEMENT
+             ================================================================== -->
+        <section id="view-tasks" class="view-page">
+          <div class="page-header-row">
+            <div class="page-title-wrap">
+              <h1 class="page-title-main"><i class="fa-solid fa-list-check"></i> Work Schedule & Tasks</h1>
+              <span class="page-subtitle-muted">Track civil execution milestones, assign worker trades, and manage work packages</span>
+            </div>
+            <div class="page-actions-group">
+              <span id="tasksCompletionStats" style="font-size: 0.82rem; margin-right: 0.5rem;"></span>
+              <button class="btn btn-primary" onclick="TasksController.openAddModal()">
+                <i class="fa-solid fa-plus"></i> Add Task
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter & View Switcher Bar -->
+          <div class="card-box" style="margin-bottom: 1.5rem; padding: 1rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <input type="text" id="taskSearchInput" class="form-input-text" placeholder="Search tasks or assignees..." style="width: 240px;">
+                <select id="taskStatusFilter" class="filter-pill-select">
+                  <option value="all">All Stages</option>
+                  <option value="todo">To Do</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+                <select id="taskPriorityFilter" class="filter-pill-select">
+                  <option value="all">All Priorities</option>
+                  <option value="high">High Priority</option>
+                  <option value="medium">Medium Priority</option>
+                  <option value="low">Low Priority</option>
+                </select>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: var(--accent-rose); cursor: pointer;">
+                  <input type="checkbox" id="taskOverdueCheckbox"> Overdue Only
+                </label>
+              </div>
+
+              <div style="display: flex; border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden;">
+                <button class="btn btn-sm btn-outline active" id="tasksViewKanbanBtn" title="Kanban Board View">
+                  <i class="fa-solid fa-table-columns"></i> Kanban
+                </button>
+                <button class="btn btn-sm btn-outline" id="tasksViewTableBtn" title="Table View">
+                  <i class="fa-solid fa-list"></i> Table
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kanban Board -->
+          <div class="kanban-board-grid" id="tasksKanbanContainer">
+            <!-- Column 1: To Do -->
+            <div class="kanban-column">
+              <div class="kanban-column-header">
+                <div class="kanban-col-title">
+                  <i class="fa-regular fa-circle" style="color: var(--text-muted);"></i> To Do
+                </div>
+                <span class="nav-badge badge-counter" id="kanbanCountTodo">0</span>
+              </div>
+              <div class="kanban-cards-stack" id="kanbanStackTodo"></div>
+            </div>
+
+            <!-- Column 2: In Progress -->
+            <div class="kanban-column">
+              <div class="kanban-column-header">
+                <div class="kanban-col-title">
+                  <i class="fa-solid fa-circle-half-stroke" style="color: var(--accent-orange);"></i> In Progress
+                </div>
+                <span class="nav-badge badge-counter" id="kanbanCountProgress">0</span>
+              </div>
+              <div class="kanban-cards-stack" id="kanbanStackProgress"></div>
+            </div>
+
+            <!-- Column 3: Completed -->
+            <div class="kanban-column">
+              <div class="kanban-column-header">
+                <div class="kanban-col-title">
+                  <i class="fa-solid fa-circle-check" style="color: var(--accent-emerald);"></i> Completed
+                </div>
+                <span class="nav-badge badge-counter" id="kanbanCountCompleted">0</span>
+              </div>
+              <div class="kanban-cards-stack" id="kanbanStackCompleted"></div>
+            </div>
+          </div>
+
+          <!-- Tasks Table (Hidden by default) -->
+          <div class="table-responsive-wrapper" id="tasksTableContainer" style="display: none; background: #ffffff;">
+            <table class="data-table-custom">
+              <thead>
+                <tr>
+                  <th>Task ID</th>
+                  <th>Title & Description</th>
+                  <th>Project</th>
+                  <th>Assigned Crew</th>
+                  <th>Due Date</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tasksTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 4: LABOUR & WORKFORCE MANAGEMENT
+             ================================================================== -->
+        <section id="view-labour" class="view-page">
+          <div class="page-header-row">
+            <div class="page-title-wrap">
+              <h1 class="page-title-main"><i class="fa-solid fa-person-digging"></i> Labour & Workforce Management</h1>
+              <span class="page-subtitle-muted">Craftsmen roster, daily muster attendance, wage calculations, and site allocation</span>
+            </div>
+            <div class="page-actions-group">
+              <button class="btn btn-primary" onclick="LabourController.openAddModal()">
+                <i class="fa-solid fa-user-plus"></i> Enroll Worker
+              </button>
+            </div>
+          </div>
+
+          <!-- Attendance Header & Quick Action Card -->
+          <div class="card-box" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <label for="attendanceDatePicker" style="font-weight: 700; font-size: 0.85rem;">Muster Date:</label>
+                <input type="date" id="attendanceDatePicker" class="form-input-text" style="width: 170px;">
+                <button class="btn btn-sm btn-outline" id="markAllPresentBtn" style="color: var(--accent-emerald); font-weight: 700;">
+                  <i class="fa-solid fa-check-double"></i> Mark All Present
+                </button>
+              </div>
+
+              <!-- Live Cost Calculation & Stats -->
+              <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <div style="font-size: 0.8rem; background: var(--bg-surface-alt); padding: 4px 10px; border-radius: var(--radius-sm);">
+                  Total: <strong id="attTotalWorkers">12</strong> | 
+                  <span style="color: var(--accent-emerald);">P: <strong id="attPresentWorkers">10</strong></span> | 
+                  <span style="color: var(--accent-rose);">A: <strong id="attAbsentWorkers">1</strong></span> | 
+                  <span style="color: var(--accent-amber);">L: <strong id="attLeaveWorkers">1</strong></span>
+                </div>
+                <div style="background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.3); padding: 4px 12px; border-radius: var(--radius-sm); font-size: 0.85rem;">
+                  Est. Daily Wage Payout: <strong id="attDailyWagePayout" style="color: var(--accent-orange-hover);">₹10,550</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Workers Search & Filter -->
+          <div class="card-box" style="margin-bottom: 1.5rem; padding: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+              <input type="text" id="labourSearchInput" class="form-input-text" placeholder="Search by name, ID, or phone..." style="width: 250px;">
+              <select id="labourSkillFilter" class="filter-pill-select">
+                <option value="all">All Trade Skills</option>
+                <option value="Head Mason">Head Mason</option>
+                <option value="Shuttering Carpenter">Carpenter</option>
+                <option value="Lead Bar Bender / Rebar">Bar Bender / Steel</option>
+                <option value="Licensed Electrician">Electrician</option>
+                <option value="Senior Plumber">Plumber</option>
+                <option value="Civil Site Supervisor">Site Supervisor</option>
+                <option value="General Civil Helper">Helper</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Workers Directory Table -->
+          <div class="table-responsive-wrapper" style="background: #ffffff;">
+            <table class="data-table-custom">
+              <thead>
+                <tr>
+                  <th>Worker ID</th>
+                  <th>Name & Contact</th>
+                  <th>Trade Skill</th>
+                  <th>Assigned Site</th>
+                  <th>Daily Wage Rate</th>
+                  <th>Attendance (P / A / L)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="labourTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 5: MATERIALS & INVENTORY MANAGEMENT
+             ================================================================== -->
+        <section id="view-materials" class="view-page">
+          <div class="page-header-row">
+            <div class="page-title-wrap">
+              <h1 class="page-title-main"><i class="fa-solid fa-cubes-stacked"></i> Materials & Site Inventory</h1>
+              <span class="page-subtitle-muted">Real-time stock tracking, procurement, consumption records, and low-inventory warnings</span>
+            </div>
+            <div class="page-actions-group">
+              <button class="btn btn-primary" onclick="MaterialsController.openAddModal()">
+                <i class="fa-solid fa-plus"></i> Add Material
+              </button>
+            </div>
+          </div>
+
+          <!-- Inventory Summary KPIs -->
+          <div class="kpi-cards-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 1.5rem;">
+            <div class="kpi-stat-card kpi-card-blue">
+              <div class="kpi-label-text">Catalogued Items</div>
+              <div class="kpi-value-text" id="matTotalItems">12</div>
+              <div class="kpi-footer-sub">Cement, steel, aggregates & MEP</div>
+            </div>
+            <div class="kpi-stat-card kpi-card-emerald">
+              <div class="kpi-label-text">Total Inventory Valuation</div>
+              <div class="kpi-value-text" id="matTotalValuation">₹14,85,000</div>
+              <div class="kpi-footer-sub">Based on current stock × unit rate</div>
+            </div>
+            <div class="kpi-stat-card kpi-card-amber">
+              <div class="kpi-label-text">Low-Stock Warnings</div>
+              <div class="kpi-value-text" id="matLowStockCount" style="color: var(--accent-amber);">4</div>
+              <div class="kpi-footer-sub">Below safety threshold</div>
+            </div>
+            <div class="kpi-stat-card kpi-card-rose">
+              <div class="kpi-label-text">Out of Stock</div>
+              <div class="kpi-value-text" id="matOutOfStockCount" style="color: var(--accent-rose);">0</div>
+              <div class="kpi-footer-sub">Depleted inventory lines</div>
+            </div>
+          </div>
+
+          <!-- Search & Filters -->
+          <div class="card-box" style="margin-bottom: 1.5rem; padding: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+              <input type="text" id="materialSearchInput" class="form-input-text" placeholder="Search material name or supplier..." style="width: 250px;">
+              <select id="materialCategoryFilter" class="filter-pill-select">
+                <option value="all">All Categories</option>
+                <option value="Cement & Aggregates">Cement & Aggregates</option>
+                <option value="Steel & Structural Metals">Steel & Structural Metals</option>
+                <option value="Bricks & Masonry">Bricks & Masonry</option>
+                <option value="Electrical & Lighting">Electrical & Lighting</option>
+                <option value="Plumbing & Sanitary">Plumbing & Sanitary</option>
+                <option value="Finishes & Paints">Finishes & Paints</option>
+                <option value="Chemicals & Admixtures">Chemicals & Waterproofing</option>
+                <option value="Safety & Site Gear">Safety & Site Gear</option>
+              </select>
+              <select id="materialStockStatusFilter" class="filter-pill-select">
+                <option value="all">All Stock Statuses</option>
+                <option value="low">Low Stock Only</option>
+                <option value="out">Out of Stock</option>
+                <option value="healthy">Healthy Stock</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Materials Table -->
+          <div class="table-responsive-wrapper" style="background: #ffffff;">
+            <table class="data-table-custom">
+              <thead>
+                <tr>
+                  <th>Material & Supplier</th>
+                  <th>Category</th>
+                  <th>Available Quantity</th>
+                  <th>Status</th>
+                  <th>Unit Rate (INR)</th>
+                  <th>Total Valuation</th>
+                  <th>Site Location</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="materialsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 6: FINANCE, EXPENSES & PAYMENTS
+             ================================================================== -->
+        <section id="view-finance" class="view-page">
+          <div class="page-header-row">
+            <div class="page-title-wrap">
+              <h1 class="page-title-main"><i class="fa-solid fa-indian-rupee-sign"></i> Finance, Expenses & Vendor Payments</h1>
+              <span class="page-subtitle-muted">Financial audit, project cost variance, site expense vouchers, and vendor disbursements</span>
+            </div>
+            <div class="page-actions-group">
+              <button class="btn btn-outline" onclick="FinanceController.openAddPaymentModal()">
+                <i class="fa-solid fa-hand-holding-dollar"></i> Disburse Payment
+              </button>
+              <button class="btn btn-primary" onclick="FinanceController.openAddExpenseModal()">
+                <i class="fa-solid fa-receipt"></i> Record Expense
+              </button>
+            </div>
+          </div>
+
+          <!-- Accounting Notice Banner -->
+          <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1.5rem; font-size: 0.8rem; color: #1e40af; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-circle-info" style="font-size: 1.1rem;"></i>
+            <span><strong>Clear Accounting Separation:</strong> <em>Expenses</em> represent project cost obligations incurred (work done/materials received). <em>Payments</em> represent cash disbursements to suppliers and contractors. Both are tracked independently to eliminate double counting.</span>
+          </div>
+
+          <!-- Financial Summary KPIs -->
+          <div class="kpi-cards-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 1.5rem;">
+            <div class="kpi-stat-card kpi-card-blue">
+              <div class="kpi-label-text">Total Budget</div>
+              <div class="kpi-value-text" id="finTotalBudget">₹4,13,00,000</div>
+              <div class="kpi-footer-sub">Authorized limit</div>
+            </div>
+            <div class="kpi-stat-card kpi-card-orange">
+              <div class="kpi-label-text">Total Incurred Expenses</div>
+              <div class="kpi-value-text" id="finTotalExpenses">₹3,13,95,000</div>
+              <div class="kpi-footer-sub">Site costs accrued</div>
+            </div>
+            <div class="kpi-stat-card kpi-card-emerald">
+              <div class="kpi-label-text">Remaining Budget</div>
+              <div class="kpi-value-text" id="finRemainingBudget">₹99,05,000</div>
+              <div class="kpi-footer-sub">Available buffer</div>
+            </div>
+            <div class="kpi-stat-card kpi-card-indigo">
+              <div class="kpi-label-text">Cleared Payments</div>
+              <div class="kpi-value-text" id="finTotalDisbursed">₹38,98,000</div>
+              <div class="kpi-footer-sub">Bank/RTGS cleared</div>
+            </div>
+            <div class="kpi-stat-card kpi-card-amber">
+              <div class="kpi-label-text">Pending Dues</div>
+              <div class="kpi-value-text" id="finPendingPayables" style="color: var(--accent-amber);">₹4,05,750</div>
+              <div class="kpi-footer-sub">Awaiting verification</div>
+            </div>
+          </div>
+
+          <!-- Subtabs Navigation -->
+          <div class="auth-tabs-toggle" style="max-width: 450px; margin-bottom: 1.5rem;">
+            <button class="auth-tab-btn active finance-nav-tab-btn" data-fintab="budgets">Budget vs Actuals</button>
+            <button class="auth-tab-btn finance-nav-tab-btn" data-fintab="expenses">Site Expenses Log</button>
+            <button class="auth-tab-btn finance-nav-tab-btn" data-fintab="payments">Vendor Payments Ledger</button>
+          </div>
+
+          <!-- TAB 1: Budgets -->
+          <div class="finance-subtab-pane" id="fintab-budgets">
+            <div class="table-responsive-wrapper" style="background: #ffffff;">
+              <table class="data-table-custom">
+                <thead>
+                  <tr>
+                    <th>Project Name & Client</th>
+                    <th>Approved Budget</th>
+                    <th>Actual Spent</th>
+                    <th>Remaining Balance</th>
+                    <th>Utilization Rate</th>
+                    <th>Health Indicator</th>
+                  </tr>
+                </thead>
+                <tbody id="finBudgetsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 2: Expenses Log -->
+          <div class="finance-subtab-pane" id="fintab-expenses" style="display: none;">
+            <div class="charts-grid-two-col" style="margin-bottom: 1.5rem;">
+              <div class="card-box">
+                <div class="card-header-clean">
+                  <div class="card-title-text"><i class="fa-solid fa-chart-pie"></i> Expense Category Breakdown</div>
+                </div>
+                <div class="card-body-content">
+                  <div class="chart-wrapper-box" style="height: 240px;">
+                    <canvas id="financeCategoryChart"></canvas>
+                  </div>
+                </div>
+              </div>
+              <div class="card-box" style="display: flex; flex-direction: column; justify-content: center; padding: 1.5rem;">
+                <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem;">Filter Expenses by Category</h4>
+                <select id="expenseCategoryFilter" class="filter-pill-select" style="max-width: 300px; margin-bottom: 1rem;">
+                  <option value="all">All Categories</option>
+                  <option value="Materials">Materials</option>
+                  <option value="Labour">Labour</option>
+                  <option value="Equipment">Equipment / Plant Hire</option>
+                  <option value="Transport">Transport & Haulage</option>
+                  <option value="Other">Utilities & Overheads</option>
+                </select>
+                <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+                  All site expenditures automatically reconcile against the project's authorized budget and trigger early warning alerts if burn rates exceed scheduled milestones.
+                </p>
+              </div>
+            </div>
+
+            <div class="table-responsive-wrapper" style="background: #ffffff;">
+              <table class="data-table-custom">
+                <thead>
+                  <tr>
+                    <th>Voucher ID</th>
+                    <th>Title & Description</th>
+                    <th>Project</th>
+                    <th>Category</th>
+                    <th>Amount (INR)</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="finExpensesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 3: Vendor Payments -->
+          <div class="finance-subtab-pane" id="fintab-payments" style="display: none;">
+            <div class="table-responsive-wrapper" style="background: #ffffff;">
+              <table class="data-table-custom">
+                <thead>
+                  <tr>
+                    <th>Payment Ref</th>
+                    <th>Payee / Supplier</th>
+                    <th>Project</th>
+                    <th>Amount (INR)</th>
+                    <th>Disbursement Date</th>
+                    <th>Status</th>
+                    <th>Method</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="finPaymentsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 7: DAILY PROJECT PROGRESS DIARY
+             ================================================================== -->
+        <section id="view-progress" class="view-page">
+          <div class="page-header-row">
+            <div class="page-title-wrap">
+              <h1 class="page-title-main"><i class="fa-solid fa-calendar-day"></i> Daily Project Progress Diary (DPR)</h1>
+              <span class="page-subtitle-muted">Site daily logs, physical execution milestones, weather constraints, and tomorrow's work orders</span>
+            </div>
+            <div class="page-actions-group">
+              <button class="btn btn-primary" onclick="ProgressController.openAddModal()">
+                <i class="fa-solid fa-plus"></i> File Daily Report
+              </button>
+            </div>
+          </div>
+
+          <!-- Summary Badges & Search -->
+          <div class="card-box" style="margin-bottom: 1.5rem; padding: 1rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <input type="text" id="progressSearchInput" class="form-input-text" placeholder="Search work logs or reported issues..." style="width: 320px;">
+              <div style="display: flex; gap: 1rem; font-size: 0.82rem;">
+                <span style="background: var(--bg-surface-alt); padding: 4px 10px; border-radius: var(--radius-sm);">
+                  Total DPR Logs: <strong id="dprTotalLogs">5</strong>
+                </span>
+                <span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: var(--radius-sm);">
+                  Issues Flagged: <strong id="dprIssuesFlagged">3</strong>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timeline Stream of Site Diary Entries -->
+          <div class="timeline-stream" id="progressTimelineStream">
+            <!-- Dynamically populated -->
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 8: AI-BASED RISK INTELLIGENCE CENTRE (CORE HIGHLIGHT)
+             ================================================================== -->
+        <section id="view-risks" class="view-page">
+          <div class="page-header-row">
+            <div class="page-title-wrap">
+              <h1 class="page-title-main"><i class="fa-solid fa-brain-circuit"></i> Risk Intelligence Centre</h1>
+              <span class="page-subtitle-muted">Heuristic anomaly detection engine predicting budget overruns, milestone delays, and supply chain bottlenecks</span>
+            </div>
+            <div class="page-actions-group">
+              <button class="btn btn-primary" id="riskRecalculateBtn">
+                <i class="fa-solid fa-arrows-rotate"></i> Recalculate Risk Engine
+              </button>
+            </div>
+          </div>
+
+          <!-- AI RISK ENGINE BANNER & GAUGE -->
+          <div class="risk-engine-banner">
+            <div class="risk-banner-content">
+              <div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-orange); font-weight: 700;">
+                  Heuristic Rule-Based Intelligence • Architecture Ready for Python ML Integration
+                </div>
+                <h2 style="font-size: 1.5rem; font-weight: 800; margin: 0.4rem 0;">Civil Construction Risk Matrix</h2>
+                <p style="font-size: 0.85rem; color: #94a3b8; max-width: 600px;">
+                  BuildTrack analyzes live cost-to-progress divergence, days remaining vs critical path tasks, worker attendance turnout, and inventory buffers to compute multi-variable risk alerts before cost overruns become irreversible.
+                </p>
+              </div>
+
+              <!-- Health Score Circular Gauge -->
+              <div class="risk-score-gauge-wrap">
+                <div class="risk-score-circle" id="riskPortfolioGauge">
+                  <div class="risk-score-circle-inner">
+                    <span class="risk-score-num" id="riskPortfolioScoreNum">72</span>
+                    <span class="risk-score-label">Health</span>
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">Portfolio Risk Index</div>
+                  <div style="font-size: 1rem; font-weight: 700;" id="riskHealthStatusBadge">Moderate Risks Detected</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prototype Transparency Note -->
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: var(--radius-md); padding: 0.75rem 1.25rem; margin-bottom: 1.5rem; font-size: 0.78rem; color: #475569;">
+            <i class="fa-solid fa-microchip" style="color: var(--accent-blue); margin-right: 4px;"></i>
+            <strong>Preliminary Heuristic Engine:</strong> Predictions are computed using transparent deterministic algorithms (Earned Value CPI/SPI ratios, burn divergence, stock thresholds). Clean Python Flask/Pandas ML service contracts (Random Forest / XGBoost) are planned for final backend deployment.
+          </div>
+
+          <!-- Detected Risk Cards Grid -->
+          <div class="risk-cards-grid" id="riskAlertsCardsContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 9: REPORTS & ANALYTICS
+             ================================================================== -->
+        <section id="view-reports" class="view-page">
+          <div class="page-header-row">
+            <div class="page-title-wrap">
+              <h1 class="page-title-main"><i class="fa-solid fa-file-invoice-dollar"></i> Reports & Site Analytics</h1>
+              <span class="page-subtitle-muted">Generate multi-domain audit reports with instant summary statistics, print layout, and CSV download</span>
+            </div>
+            <div class="page-actions-group">
+              <button class="btn btn-outline" id="printReportBtn">
+                <i class="fa-solid fa-print"></i> Print Report
+              </button>
+              <button class="btn btn-primary" id="exportReportCsvBtn">
+                <i class="fa-solid fa-file-csv"></i> Download CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- Report Selector Bar -->
+          <div class="card-box" style="margin-bottom: 1.5rem; padding: 1rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <label for="reportTypeSelect" style="font-weight: 700; font-size: 0.85rem;">Select Audit Report:</label>
+                <select id="reportTypeSelect" class="filter-pill-select" style="min-width: 250px;">
+                  <option value="progress">Project Progress & Milestone Audit</option>
+                  <option value="finance">Budget vs Actual Expenses Audit</option>
+                  <option value="labour">Labour Attendance & Wage Payout Audit</option>
+                  <option value="materials">Material Inventory & Stock Valuation Audit</option>
+                  <option value="payments">Vendor Payments & Disbursement Ledger</option>
+                  <option value="tasks">Delayed Tasks & Overdue Bottlenecks</option>
+                </select>
+
+                <select id="reportProjectFilter" class="filter-pill-select">
+                  <option value="all">All Projects Combined</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Report Container -->
+          <div class="card-box" style="padding: 1.75rem;">
+            <div style="margin-bottom: 1.5rem;">
+              <h2 id="reportDisplayTitle" style="font-size: 1.3rem; font-weight: 800; color: var(--text-main);">Project Progress & Milestone Delivery Audit</h2>
+              <p id="reportDisplaySubtitle" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Generated for BuildTrack Construction Portal</p>
+            </div>
+
+            <!-- Dynamic KPI Summary Stat Cards for this report -->
+            <div id="reportSummaryStats" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+              <!-- Dynamically populated -->
+            </div>
+
+            <!-- Dynamic Table Container -->
+            <div id="reportDynamicTableWrapper">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 10: SETTINGS & USER PROFILE
+             ================================================================== -->
+        <section id="view-settings" class="view-page">
+          <div class="page-header-row">
+            <div class="page-title-wrap">
+              <h1 class="page-title-main"><i class="fa-solid fa-sliders"></i> System Settings & Company Profile</h1>
+              <span class="page-subtitle-muted">Contractor license parameters, user profile, currency formatting (INR), and prototype data management</span>
+            </div>
+          </div>
+
+          <div class="charts-grid-two-col">
+            <!-- Contractor Firm Profile -->
+            <div class="card-box">
+              <div class="card-header-clean">
+                <div class="card-title-text"><i class="fa-solid fa-building-shield"></i> Contractor Company Profile</div>
+              </div>
+              <div class="card-body-content">
+                <form id="companySettingsForm">
+                  <div class="form-group-field">
+                    <label class="form-label-title" for="settingsCompanyName">Firm Legal Name</label>
+                    <input type="text" id="settingsCompanyName" class="form-input-text" value="BuildTrack Infrastructure & Construction LLP">
+                  </div>
+
+                  <div class="form-grid-two">
+                    <div class="form-group-field">
+                      <label class="form-label-title" for="settingsContractorName">Principal Contractor</label>
+                      <input type="text" id="settingsContractorName" class="form-input-text" value="Er. Rajesh Kumar">
+                    </div>
+                    <div class="form-group-field">
+                      <label class="form-label-title" for="settingsLicense">Contractor License No</label>
+                      <input type="text" id="settingsLicense" class="form-input-text" value="PWD/CLASS-1/BLR/2021/049">
+                    </div>
+                  </div>
+
+                  <div class="form-grid-two">
+                    <div class="form-group-field">
+                      <label class="form-label-title" for="settingsGstin">GSTIN Number</label>
+                      <input type="text" id="settingsGstin" class="form-input-text" value="29ABCDE1234F1Z5">
+                    </div>
+                    <div class="form-group-field">
+                      <label class="form-label-title" for="settingsPhone">Official Phone</label>
+                      <input type="text" id="settingsPhone" class="form-input-text" value="+91 98450 12345">
+                    </div>
+                  </div>
+
+                  <div class="form-group-field">
+                    <label class="form-label-title" for="settingsEmail">Official Email</label>
+                    <input type="email" id="settingsEmail" class="form-input-text" value="admin@buildtrack.com">
+                  </div>
+
+                  <div class="form-group-field">
+                    <label class="form-label-title" for="settingsBudgetThreshold">Budget Alert Threshold (%)</label>
+                    <input type="number" id="settingsBudgetThreshold" class="form-input-text" value="85" min="50" max="100">
+                    <span class="form-helper-note">Triggers warning when expenses reach this % of project budget</span>
+                  </div>
+
+                  <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">
+                    Save Firm Settings
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- User Profile & System Preferences -->
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+              <div class="card-box">
+                <div class="card-header-clean">
+                  <div class="card-title-text"><i class="fa-solid fa-user-gear"></i> Active Engineer Profile</div>
+                </div>
+                <div class="card-body-content">
+                  <form id="userProfileForm">
+                    <div class="form-group-field">
+                      <label class="form-label-title" for="profileUserName">Engineer Name</label>
+                      <input type="text" id="profileUserName" class="form-input-text" value="Er. Rajesh Kumar">
+                    </div>
+                    <div class="form-grid-two">
+                      <div class="form-group-field">
+                        <label class="form-label-title" for="profileUserEmail">Email Address</label>
+                        <input type="email" id="profileUserEmail" class="form-input-text" value="admin@buildtrack.com">
+                      </div>
+                      <div class="form-group-field">
+                        <label class="form-label-title" for="profileUserRole">System Role</label>
+                        <input type="text" id="profileUserRole" class="form-input-text" value="Principal Contractor">
+                      </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                  </form>
+                </div>
+              </div>
+
+              <!-- System Preferences & Data Reset -->
+              <div class="card-box">
+                <div class="card-header-clean">
+                  <div class="card-title-text"><i class="fa-solid fa-wrench"></i> Demo Data & Appearance</div>
+                </div>
+                <div class="card-body-content">
+                  <div class="form-group-field">
+                    <label class="form-label-title">Currency Standard</label>
+                    <input type="text" class="form-input-text" value="₹ Indian Rupee (INR)" disabled style="background-color: var(--bg-surface-alt);">
+                  </div>
+
+                  <div class="form-group-field">
+                    <label class="form-label-title" for="settingsThemeSelect">Theme Mode</label>
+                    <select id="settingsThemeSelect" class="form-select-custom">
+                      <option value="light">Light Mode (Construction Standard)</option>
+                      <option value="dark">Dark Navy Mode</option>
+                    </select>
+                  </div>
+
+                  <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
+                    <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-rose); margin-bottom: 4px;">
+                      <i class="fa-solid fa-trash-can-arrow-up"></i> Reset Prototype Database
+                    </div>
+                    <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1rem;">
+                      Erases newly added records and reloads the pristine 5 construction projects, tasks, workforce, materials, and expense logs.
+                    </p>
+                    <button type="button" class="btn btn-danger btn-sm" id="resetDemoDataBtn">
+                      Reset Demo Data to Initial State
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODALS & DIALOGS
+       ======================================================================== -->
+
+  <!-- 1. PROJECT ADD / EDIT MODAL -->
+  <div class="modal-overlay" id="projectModal">
+    <div class="modal-dialog-box">
+      <div class="modal-header-bar">
+        <h3 class="modal-title-heading" id="projectModalTitle">Add New Construction Project</h3>
+        <button class="modal-close-x">&times;</button>
+      </div>
+      <div class="modal-body-scrollable">
+        <form id="projectAddEditForm">
+          <input type="hidden" id="projectFormId">
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="projectFormName">Project Name <span class="required">*</span></label>
+            <input type="text" id="projectFormName" class="form-input-text" placeholder="e.g. Apex Heights Commercial Tower" required>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="projectFormClient">Client / Developer <span class="required">*</span></label>
+              <input type="text" id="projectFormClient" class="form-input-text" placeholder="e.g. Brigade Tech Spaces Ltd" required>
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="projectFormLocation">Construction Location <span class="required">*</span></label>
+              <input type="text" id="projectFormLocation" class="form-input-text" placeholder="e.g. Whitefield, Bengaluru" required>
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="projectFormManager">Project Manager / Engineer <span class="required">*</span></label>
+              <input type="text" id="projectFormManager" class="form-input-text" placeholder="Er. Rajesh Kumar" required>
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="projectFormBudget">Authorized Budget (₹ INR) <span class="required">*</span></label>
+              <input type="number" id="projectFormBudget" class="form-input-text" placeholder="8500000" min="10000" step="5000" required>
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="projectFormStartDate">Start Date <span class="required">*</span></label>
+              <input type="date" id="projectFormStartDate" class="form-input-text" required>
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="projectFormEndDate">Target Completion Date <span class="required">*</span></label>
+              <input type="date" id="projectFormEndDate" class="form-input-text" required>
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="projectFormStatus">Project Status</label>
+              <select id="projectFormStatus" class="form-select-custom">
+                <option value="ongoing">Ongoing</option>
+                <option value="planning">Planning</option>
+                <option value="delayed">Delayed</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="projectFormProgress">Current Progress (%)</label>
+              <input type="number" id="projectFormProgress" class="form-input-text" min="0" max="100" value="0">
+            </div>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="projectFormDesc">Scope & Specifications Description</label>
+            <textarea id="projectFormDesc" class="form-textarea-custom" placeholder="Details regarding structural framing, floor slabs, concrete grade, compliance specs..."></textarea>
+          </div>
+
+          <div class="modal-footer-bar">
+            <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Project</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. PROJECT DETAILS DEEP DIVE MODAL -->
+  <div class="modal-overlay" id="projectDetailsModal">
+    <div class="modal-dialog-box modal-lg">
+      <div class="modal-header-bar">
+        <div>
+          <h3 class="modal-title-heading" id="detailsProjectTitle">Project Details</h3>
+          <span style="font-size: 0.75rem; color: var(--text-muted);" id="detailsProjectClient">Client & Location</span>
+        </div>
+        <button class="modal-close-x">&times;</button>
+      </div>
+
+      <div class="modal-body-scrollable">
+        <!-- Subtabs inside Details Modal -->
+        <div class="auth-tabs-toggle" style="margin-bottom: 1.25rem;">
+          <button class="auth-tab-btn active project-subtab-btn" data-subtab="overview">Overview</button>
+          <button class="auth-tab-btn project-subtab-btn" data-subtab="tasks">Tasks</button>
+          <button class="auth-tab-btn project-subtab-btn" data-subtab="expenses">Expenses</button>
+          <button class="auth-tab-btn project-subtab-btn" data-subtab="labour">Labour</button>
+          <button class="auth-tab-btn project-subtab-btn" data-subtab="materials">Materials</button>
+          <button class="auth-tab-btn project-subtab-btn" data-subtab="payments">Payments</button>
+          <button class="auth-tab-btn project-subtab-btn" data-subtab="progress">Daily Logs</button>
+        </div>
+
+        <div id="subtabContent-overview" class="project-subtab-content"></div>
+        <div id="subtabContent-tasks" class="project-subtab-content" style="display: none;"></div>
+        <div id="subtabContent-expenses" class="project-subtab-content" style="display: none;"></div>
+        <div id="subtabContent-labour" class="project-subtab-content" style="display: none;"></div>
+        <div id="subtabContent-materials" class="project-subtab-content" style="display: none;"></div>
+        <div id="subtabContent-payments" class="project-subtab-content" style="display: none;"></div>
+        <div id="subtabContent-progress" class="project-subtab-content" style="display: none;"></div>
+      </div>
+
+      <div class="modal-footer-bar">
+        <button type="button" class="btn btn-outline" data-close-modal>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. TASK ADD / EDIT MODAL -->
+  <div class="modal-overlay" id="taskModal">
+    <div class="modal-dialog-box">
+      <div class="modal-header-bar">
+        <h3 class="modal-title-heading" id="taskModalTitle">Add Construction Task</h3>
+        <button class="modal-close-x">&times;</button>
+      </div>
+      <div class="modal-body-scrollable">
+        <form id="taskAddEditForm">
+          <input type="hidden" id="taskFormId">
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="taskFormTitle">Task Title <span class="required">*</span></label>
+            <input type="text" id="taskFormTitle" class="form-input-text" placeholder="e.g. RCC Column Casting - Floor 9" required>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="taskFormProject">Related Project <span class="required">*</span></label>
+            <select id="taskFormProject" class="form-select-custom" required></select>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="taskFormAssignee">Assigned Worker or Team Trade</label>
+            <input type="text" id="taskFormAssignee" class="form-input-text" placeholder="Ramesh Patel (Mason Team)">
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="taskFormStartDate">Start Date</label>
+              <input type="date" id="taskFormStartDate" class="form-input-text">
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="taskFormDueDate">Due Date <span class="required">*</span></label>
+              <input type="date" id="taskFormDueDate" class="form-input-text" required>
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="taskFormPriority">Priority Level</label>
+              <select id="taskFormPriority" class="form-select-custom">
+                <option value="low">Low Priority</option>
+                <option value="medium" selected>Medium Priority</option>
+                <option value="high">High Priority</option>
+              </select>
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="taskFormStatus">Current Status</label>
+              <select id="taskFormStatus" class="form-select-custom">
+                <option value="todo">To Do</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="taskFormDesc">Engineering Details / Instructions</label>
+            <textarea id="taskFormDesc" class="form-textarea-custom" placeholder="Rebar binding, shuttering checklist, concrete pour instructions..."></textarea>
+          </div>
+
+          <div class="modal-footer-bar">
+            <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Task</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. WORKER ADD / EDIT MODAL -->
+  <div class="modal-overlay" id="workerModal">
+    <div class="modal-dialog-box">
+      <div class="modal-header-bar">
+        <h3 class="modal-title-heading" id="workerModalTitle">Enroll Worker / Craftsman</h3>
+        <button class="modal-close-x">&times;</button>
+      </div>
+      <div class="modal-body-scrollable">
+        <form id="workerAddEditForm">
+          <input type="hidden" id="workerFormId">
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="workerFormName">Worker Full Name <span class="required">*</span></label>
+            <input type="text" id="workerFormName" class="form-input-text" placeholder="Ramesh Patel" required>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="workerFormSkill">Craft / Skill Role <span class="required">*</span></label>
+              <select id="workerFormSkill" class="form-select-custom">
+                <option value="Head Mason">Head Mason</option>
+                <option value="Brickwork Mason">Brickwork Mason</option>
+                <option value="Shuttering Carpenter">Shuttering Carpenter</option>
+                <option value="Lead Bar Bender / Rebar">Bar Bender / Steel Fixer</option>
+                <option value="Licensed Electrician">Licensed Electrician</option>
+                <option value="Senior Plumber">Senior Plumber</option>
+                <option value="Civil Site Supervisor">Site Supervisor</option>
+                <option value="Concrete Pump Operator">Concrete Pump Operator</option>
+                <option value="Structural Welder & Fabricator">Welder & Fabricator</option>
+                <option value="Specialist Tile & Paint Finisher">Tile & Paint Finisher</option>
+                <option value="Waterproofing Applicator">Waterproofing Specialist</option>
+                <option value="General Civil Helper">General Helper</option>
+              </select>
+            </div>
+
+            <div class="form-group-field">
+              <label class="form-label-title" for="workerFormWage">Daily Wage (₹ INR) <span class="required">*</span></label>
+              <input type="number" id="workerFormWage" class="form-input-text" placeholder="950" min="300" step="50" required>
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="workerFormPhone">Contact Phone Number</label>
+              <input type="text" id="workerFormPhone" class="form-input-text" placeholder="+91 98452 31102">
+            </div>
+
+            <div class="form-group-field">
+              <label class="form-label-title" for="workerFormProject">Assigned Site / Project <span class="required">*</span></label>
+              <select id="workerFormProject" class="form-select-custom" required></select>
+            </div>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="workerFormAvailability">Initial Site Availability</label>
+            <select id="workerFormAvailability" class="form-select-custom">
+              <option value="On Site">On Site (Active)</option>
+              <option value="Available">Available (Reserve)</option>
+            </select>
+          </div>
+
+          <div class="modal-footer-bar">
+            <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Worker</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. MATERIAL ADD / EDIT MODAL -->
+  <div class="modal-overlay" id="materialModal">
+    <div class="modal-dialog-box">
+      <div class="modal-header-bar">
+        <h3 class="modal-title-heading" id="materialModalTitle">Add Construction Material</h3>
+        <button class="modal-close-x">&times;</button>
+      </div>
+      <div class="modal-body-scrollable">
+        <form id="materialAddEditForm">
+          <input type="hidden" id="matFormId">
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="matFormName">Material Name & Specification <span class="required">*</span></label>
+            <input type="text" id="matFormName" class="form-input-text" placeholder="e.g. UltraTech PPC Cement (50kg)" required>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="matFormCategory">Category <span class="required">*</span></label>
+              <select id="matFormCategory" class="form-select-custom">
+                <option value="Cement & Aggregates">Cement & Aggregates</option>
+                <option value="Steel & Structural Metals">Steel & Structural Metals</option>
+                <option value="Bricks & Masonry">Bricks & Masonry</option>
+                <option value="Electrical & Lighting">Electrical & Lighting</option>
+                <option value="Plumbing & Sanitary">Plumbing & Sanitary</option>
+                <option value="Finishes & Paints">Finishes & Paints</option>
+                <option value="Chemicals & Admixtures">Chemicals & Waterproofing</option>
+                <option value="Safety & Site Gear">Safety & Site Gear</option>
+              </select>
+            </div>
+
+            <div class="form-group-field">
+              <label class="form-label-title" for="matFormUnit">Unit of Measure <span class="required">*</span></label>
+              <input type="text" id="matFormUnit" class="form-input-text" placeholder="Bags, Tons, Cu.M, Boxes..." required>
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="matFormQuantity">Initial Stock Quantity <span class="required">*</span></label>
+              <input type="number" id="matFormQuantity" class="form-input-text" min="0" step="any" placeholder="100" required>
+            </div>
+
+            <div class="form-group-field">
+              <label class="form-label-title" for="matFormMinStock">Minimum Safety Threshold <span class="required">*</span></label>
+              <input type="number" id="matFormMinStock" class="form-input-text" min="0" step="any" placeholder="25" required>
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="matFormUnitPrice">Unit Rate (₹ INR) <span class="required">*</span></label>
+              <input type="number" id="matFormUnitPrice" class="form-input-text" min="0" step="any" placeholder="450" required>
+            </div>
+
+            <div class="form-group-field">
+              <label class="form-label-title" for="matFormSupplier">Supplier / Distributor</label>
+              <input type="text" id="matFormSupplier" class="form-input-text" placeholder="UltraTech Building Solutions">
+            </div>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="matFormProject">Allocated Project Yard</label>
+            <select id="matFormProject" class="form-select-custom"></select>
+          </div>
+
+          <div class="modal-footer-bar">
+            <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Material</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. MATERIAL STOCK IN / OUT ACTION MODAL -->
+  <div class="modal-overlay" id="materialStockActionModal">
+    <div class="modal-dialog-box" style="max-width: 480px;">
+      <div class="modal-header-bar">
+        <h3 class="modal-title-heading" id="stockActionModalTitle">Stock In / Out</h3>
+        <button class="modal-close-x">&times;</button>
+      </div>
+      <div class="modal-body-scrollable">
+        <form id="materialStockActionForm">
+          <input type="hidden" id="stockActionMaterialId">
+          <input type="hidden" id="stockActionType">
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="stockActionQuantity">Quantity (<span id="stockActionUnitLabel">Units</span>) <span class="required">*</span></label>
+            <input type="number" id="stockActionQuantity" class="form-input-text" min="0.1" step="any" placeholder="Enter quantity" required>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="stockActionProject">Project Consuming / Receiving</label>
+            <select id="stockActionProject" class="form-select-custom"></select>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="stockActionNotes">Transaction Reference / Delivery Challan</label>
+            <input type="text" id="stockActionNotes" class="form-input-text" placeholder="e.g. Challan #9918 or Pour floor 8">
+          </div>
+
+          <div class="modal-footer-bar">
+            <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">Confirm Transaction</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. MATERIAL HISTORY MODAL -->
+  <div class="modal-overlay" id="materialHistoryModal">
+    <div class="modal-dialog-box">
+      <div class="modal-header-bar">
+        <div>
+          <h3 class="modal-title-heading">Inventory Transaction Log</h3>
+          <span style="font-size: 0.75rem; color: var(--text-muted);" id="historyMaterialName">Material</span>
+        </div>
+        <button class="modal-close-x">&times;</button>
+      </div>
+      <div class="modal-body-scrollable" id="materialHistoryList">
+        <!-- Dynamically populated -->
+      </div>
+      <div class="modal-footer-bar">
+        <button type="button" class="btn btn-outline" data-close-modal>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. EXPENSE ADD / EDIT MODAL -->
+  <div class="modal-overlay" id="expenseModal">
+    <div class="modal-dialog-box">
+      <div class="modal-header-bar">
+        <h3 class="modal-title-heading" id="expenseModalTitle">Record Site Expense</h3>
+        <button class="modal-close-x">&times;</button>
+      </div>
+      <div class="modal-body-scrollable">
+        <form id="expenseAddEditForm">
+          <input type="hidden" id="expenseFormId">
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="expenseFormTitle">Expense Title / Voucher <span class="required">*</span></label>
+            <input type="text" id="expenseFormTitle" class="form-input-text" placeholder="e.g. Ready-Mix Concrete M35 Supply" required>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="expenseFormProject">Charge to Project <span class="required">*</span></label>
+              <select id="expenseFormProject" class="form-select-custom" required></select>
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="expenseFormCategory">Expense Category <span class="required">*</span></label>
+              <select id="expenseFormCategory" class="form-select-custom">
+                <option value="Materials">Materials</option>
+                <option value="Labour">Labour</option>
+                <option value="Equipment">Equipment / Plant Lease</option>
+                <option value="Transport">Transport & Muck Haulage</option>
+                <option value="Other">Other / Site Overheads</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="expenseFormAmount">Incurred Amount (₹ INR) <span class="required">*</span></label>
+              <input type="number" id="expenseFormAmount" class="form-input-text" min="1" step="any" placeholder="50000" required>
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="expenseFormDate">Voucher Date <span class="required">*</span></label>
+              <input type="date" id="expenseFormDate" class="form-input-text" required>
+            </div>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="expenseFormMethod">Payment Method</label>
+            <select id="expenseFormMethod" class="form-select-custom">
+              <option value="Bank Transfer (RTGS)">Bank Transfer (RTGS)</option>
+              <option value="Bank Transfer (NEFT)">Bank Transfer (NEFT)</option>
+              <option value="UPI">UPI / Digital Payment</option>
+              <option value="Cheque">Cheque</option>
+              <option value="Cash">Cash (Petty Cash)</option>
+            </select>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="expenseFormDesc">Invoice Ref / Engineering Notes</label>
+            <textarea id="expenseFormDesc" class="form-textarea-custom" placeholder="Supplier invoice number, tax challan, batch inspection reference..."></textarea>
+          </div>
+
+          <div class="modal-footer-bar">
+            <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Expense Voucher</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. PAYMENT ADD / EDIT MODAL -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal-dialog-box">
+      <div class="modal-header-bar">
+        <h3 class="modal-title-heading" id="paymentModalTitle">Disburse Vendor Payment</h3>
+        <button class="modal-close-x">&times;</button>
+      </div>
+      <div class="modal-body-scrollable">
+        <form id="paymentAddEditForm">
+          <input type="hidden" id="paymentFormId">
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="paymentFormRecipient">Payee / Vendor / Subcontractor <span class="required">*</span></label>
+            <input type="text" id="paymentFormRecipient" class="form-input-text" placeholder="e.g. Tata Steel Authorized Stockist" required>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="paymentFormProject">Project Account <span class="required">*</span></label>
+              <select id="paymentFormProject" class="form-select-custom" required></select>
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="paymentFormAmount">Payment Amount (₹ INR) <span class="required">*</span></label>
+              <input type="number" id="paymentFormAmount" class="form-input-text" min="1" step="any" placeholder="100000" required>
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="paymentFormDate">Disbursement Date <span class="required">*</span></label>
+              <input type="date" id="paymentFormDate" class="form-input-text" required>
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="paymentFormStatus">Payment Clearance Status</label>
+              <select id="paymentFormStatus" class="form-select-custom">
+                <option value="Paid">Paid (Cleared)</option>
+                <option value="Pending">Pending (Scheduled)</option>
+                <option value="Failed">Failed / Under Dispute</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="paymentFormMethod">Payment Mode</label>
+            <select id="paymentFormMethod" class="form-select-custom">
+              <option value="Bank Transfer (RTGS)">Bank Transfer (RTGS)</option>
+              <option value="Bank Transfer (NEFT)">Bank Transfer (NEFT)</option>
+              <option value="Cheque">Cheque</option>
+              <option value="UPI">UPI</option>
+            </select>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="paymentFormNotes">Bank UTR / Transaction Ref</label>
+            <input type="text" id="paymentFormNotes" class="form-input-text" placeholder="UTR: HDFC0092819028">
+          </div>
+
+          <div class="modal-footer-bar">
+            <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Payment Entry</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. DAILY PROGRESS REPORT MODAL -->
+  <div class="modal-overlay" id="dailyProgressModal">
+    <div class="modal-dialog-box modal-lg">
+      <div class="modal-header-bar">
+        <h3 class="modal-title-heading">Log Daily Site Progress Report</h3>
+        <button class="modal-close-x">&times;</button>
+      </div>
+      <div class="modal-body-scrollable">
+        <form id="dailyProgressForm">
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="dprFormProject">Select Construction Site <span class="required">*</span></label>
+              <select id="dprFormProject" class="form-select-custom" required></select>
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="dprFormDate">Site Log Date <span class="required">*</span></label>
+              <input type="date" id="dprFormDate" class="form-input-text" required>
+            </div>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="dprFormWork">Work Completed Today <span class="required">*</span></label>
+            <textarea id="dprFormWork" class="form-textarea-custom" placeholder="e.g. Cast 14 columns on 9th floor using M35 RMC. Curing maintained on deck slab." required></textarea>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="dprFormProgress">Updated Physical Completion % (0 - 100)</label>
+              <input type="number" id="dprFormProgress" class="form-input-text" min="0" max="100" value="70">
+              <span class="form-helper-note">Syncs with project progress indicator automatically</span>
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="dprFormWorkers">Workforce Present on Duty</label>
+              <input type="number" id="dprFormWorkers" class="form-input-text" min="0" value="15">
+            </div>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title" for="dprFormMaterials">Materials Consumed Today</label>
+            <input type="text" id="dprFormMaterials" class="form-input-text" placeholder="e.g. 48 Cu.M RMC, 45 bags cement, 1.2 tons rebar">
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="dprFormIssues">Issues Encountered / Technical Impediments</label>
+              <input type="text" id="dprFormIssues" class="form-input-text" placeholder="e.g. Brief pump blockage, rain downtime, low rebar stock...">
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="dprFormBlockers">Critical Delay Blockers (If Any)</label>
+              <input type="text" id="dprFormBlockers" class="form-input-text" placeholder="e.g. Traffic police night permit pending">
+            </div>
+          </div>
+
+          <div class="form-grid-two">
+            <div class="form-group-field">
+              <label class="form-label-title" for="dprFormNextDay">Tomorrow's Work Targets</label>
+              <input type="text" id="dprFormNextDay" class="form-input-text" placeholder="e.g. Strip column formwork, begin staging 9th floor deck">
+            </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="dprFormReporter">Site Engineer / In-Charge</label>
+              <input type="text" id="dprFormReporter" class="form-input-text" value="Er. Rajesh Kumar">
+            </div>
+          </div>
+
+          <div class="modal-footer-bar">
+            <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">File Site Diary Log</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. RISK DRILLDOWN MODAL -->
+  <div class="modal-overlay" id="riskDrilldownModal">
+    <div class="modal-dialog-box modal-lg">
+      <div class="modal-header-bar">
+        <div>
+          <h3 class="modal-title-heading" id="riskDrilldownProjectName">Project Risk Audit</h3>
+          <span style="font-size: 0.75rem; color: var(--text-muted);" id="riskDrilldownClient">Client & Location</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="status-badge" id="riskDrilldownScoreBadge">Risk Score: 75/100</span>
+          <button class="modal-close-x">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body-scrollable" id="riskDrilldownModalBody">
+        <!-- Dynamically populated -->
+      </div>
+      <div class="modal-footer-bar">
+        <button type="button" class="btn btn-outline" data-close-modal>Close Audit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12. UNIVERSAL CONFIRMATION MODAL -->
+  <div class="modal-overlay" id="confirmActionModal">
+    <div class="modal-dialog-box" style="max-width: 440px;">
+      <div class="confirm-dialog-body">
+        <div class="confirm-dialog-icon">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <h3 class="confirm-dialog-title" id="confirmModalTitle">Are you sure?</h3>
+        <p class="confirm-dialog-desc" id="confirmModalDesc">This action cannot be undone.</p>
+        <div style="display: flex; justify-content: center; gap: 0.75rem;">
+          <button type="button" class="btn btn-outline" data-close-modal>Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmModalActionBtn">Confirm Action</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       SCRIPTS (ORDERED MODULAR ARCHITECTURE)
+       ======================================================================== -->
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- BuildTrack Core Data & Services -->
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/projects.js"></script>
+  <script src="js/tasks.js"></script>
+  <script src="js/labour.js"></script>
+  <script src="js/materials.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/progress.js"></script>
+  <script src="js/risks.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>
