@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <circle cx="50" cy="50" r="50" fill="#1e293b"/>
+  <!-- Hard Hat -->
+  <path d="M25 50 C25 28 75 28 75 50 Z" fill="#f97316"/>
+  <rect x="20" y="48" width="60" height="6" rx="3" fill="#ea580c"/>
+  <!-- Head -->
+  <circle cx="50" cy="58" r="16" fill="#f8fafc"/>
+  <!-- Shoulders -->
+  <path d="M22 88 C22 72 38 68 50 68 C62 68 78 72 78 88 Z" fill="#0ea5e9"/>
+</svg>
