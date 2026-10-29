@@ -147,12 +147,15 @@ CREATE TABLE IF NOT EXISTS company_settings (
     deadline_alerts_days INTEGER NOT NULL DEFAULT 14 CHECK (deadline_alerts_days >= 0)
 );
 
--- Frontend profile only; demo login credentials/sessions are deliberately not stored here.
+-- Profile records are not authentication credentials or trusted sessions.
 CREATE TABLE IF NOT EXISTS user_profiles (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    role TEXT NOT NULL,
-    email TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN (
+        'Contractor / Admin', 'Site Engineer / Supervisor',
+        'Storekeeper', 'Client / Project Owner'
+    )),
+    email TEXT NOT NULL COLLATE NOCASE UNIQUE,
     avatar TEXT NOT NULL DEFAULT ''
 );
 

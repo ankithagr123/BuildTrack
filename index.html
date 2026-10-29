@@ -26,104 +26,78 @@
   <div class="toast-notifications-container" id="toastContainer"></div>
 
   <!-- ========================================================================
-       AUTHENTICATION OVERLAY (PROTOTYPE DEMO LOGIN & REGISTRATION)
+       AUTHENTICATION ENTRY PAGE (FRONTEND PROTOTYPE)
        ======================================================================== -->
-  <div class="auth-overlay-backdrop hidden" id="authOverlay">
-    <div class="auth-card-panel">
-      <div class="auth-header-strip">
-        <img src="assets/logo.svg" alt="BuildTrack Logo" class="auth-brand-logo">
-        <h2 style="font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em;">BuildTrack Construction OS</h2>
-        <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">AI-Based Project Management & Risk Prediction</p>
-      </div>
-
-      <div class="auth-body-container">
-        <!-- Toggle Tabs -->
-        <div class="auth-tabs-toggle">
-          <button type="button" class="auth-tab-btn active" id="tabAuthLogin">Sign In</button>
-          <button type="button" class="auth-tab-btn" id="tabAuthRegister">Create Account</button>
+  <div class="auth-overlay-backdrop" id="authOverlay">
+    <div class="auth-page-shell">
+      <section class="auth-welcome-panel" aria-label="BuildTrack overview">
+        <div class="auth-page-brand" aria-label="BuildTrack">
+          <img src="assets/logo.svg" alt="" class="auth-brand-logo">
+          <span>Build<span>Track</span></span>
         </div>
-
-        <!-- Demo Credentials Autofill Banner -->
-        <div class="demo-credentials-banner">
-          <div style="font-weight: 700; display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-            <i class="fa-solid fa-key"></i> Quick Demo Access (Click to Autofill)
-          </div>
-          <div class="demo-cred-row">
-            <span><strong>Admin / Contractor:</strong> admin@buildtrack.com / admin123</span>
-            <span class="demo-quick-fill-btn" id="fillAdminCreds">Autofill</span>
-          </div>
-          <div class="demo-cred-row">
-            <span><strong>Site Engineer:</strong> engineer@buildtrack.com / build2026</span>
-            <span class="demo-quick-fill-btn" id="fillEngineerCreds">Autofill</span>
+        <div class="auth-welcome-copy">
+          <span class="auth-eyebrow"><i class="fa-solid fa-compass-drafting"></i> Construction operations, in sync</span>
+          <h1>Build with clarity.<br><span>Deliver with confidence.</span></h1>
+          <p>One workspace for your projects, people, materials, and progress—so every site moves forward with confidence.</p>
+          <div class="auth-feature-list">
+            <div><i class="fa-solid fa-chart-line"></i><span><strong>See the whole portfolio</strong><small>Budgets, milestones, and site health at a glance.</small></span></div>
+            <div><i class="fa-solid fa-helmet-safety"></i><span><strong>Keep every site aligned</strong><small>Bring teams, tasks, and resources together.</small></span></div>
           </div>
         </div>
+        <div class="auth-welcome-footer"><i class="fa-solid fa-shield-halved"></i> Built for the work happening on site.</div>
+      </section>
 
-        <!-- Sign In Form -->
-        <form id="loginForm">
-          <div class="form-group-field">
-            <label class="form-label-title" for="loginEmail">Email Address <span class="required">*</span></label>
-            <input type="email" id="loginEmail" class="form-input-text" placeholder="contractor@buildtrack.com" required value="admin@buildtrack.com">
-          </div>
+      <section class="auth-form-panel" aria-labelledby="loginHeading">
+        <div class="auth-mobile-brand">
+          <img src="assets/logo.svg" alt="" class="auth-brand-logo"><span>Build<span>Track</span></span>
+        </div>
+        <div class="auth-form-content">
+          <span class="auth-form-kicker">CONTRACTOR WORKSPACE</span>
+          <h2 id="loginHeading">Welcome back</h2>
+          <p class="auth-form-intro">Sign in to continue to your project dashboard.</p>
 
-          <div class="form-group-field">
-            <label class="form-label-title" for="loginPassword">Password <span class="required">*</span></label>
-            <div class="password-input-wrapper">
-              <input type="password" id="loginPassword" class="form-input-text" placeholder="••••••••" required value="admin123">
-              <i class="fa-solid fa-eye password-toggle-eye"></i>
+          <form id="loginForm" class="auth-login-form">
+            <div class="form-group-field">
+              <label class="form-label-title" for="loginEmail">Work email</label>
+              <div class="auth-input-wrap"><i class="fa-regular fa-envelope" aria-hidden="true"></i>
+                <input type="email" id="loginEmail" class="form-input-text" placeholder="you@company.com" autocomplete="email" required>
+              </div>
             </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; margin-top: 1rem;">
-            Sign In to Construction Portal <i class="fa-solid fa-arrow-right"></i>
-          </button>
-        </form>
-
-        <!-- Registration Form -->
-        <form id="registerForm" style="display: none;">
-          <div class="form-group-field">
-            <label class="form-label-title" for="regName">Contractor / Full Name <span class="required">*</span></label>
-            <input type="text" id="regName" class="form-input-text" placeholder="Er. Vikram Shinde" required>
-          </div>
-
-          <div class="form-group-field">
-            <label class="form-label-title" for="regRole">Role in Firm <span class="required">*</span></label>
-            <select id="regRole" class="form-select-custom">
-              <option value="Principal Contractor">Principal Contractor</option>
-              <option value="Senior Project Manager">Senior Project Manager</option>
-              <option value="Civil Site Engineer">Civil Site Engineer</option>
-              <option value="Quantity Surveyor">Quantity Surveyor</option>
-            </select>
-          </div>
-
-          <div class="form-group-field">
-            <label class="form-label-title" for="regEmail">Work Email Address <span class="required">*</span></label>
-            <input type="email" id="regEmail" class="form-input-text" placeholder="engineer@buildtrack.com" required>
-          </div>
-
-          <div class="form-group-field">
-            <label class="form-label-title" for="regPassword">Set Password (min 6 chars) <span class="required">*</span></label>
-            <div class="password-input-wrapper">
-              <input type="password" id="regPassword" class="form-input-text" placeholder="••••••••" required minlength="6">
-              <i class="fa-solid fa-eye password-toggle-eye"></i>
+            <div class="form-group-field">
+              <label class="form-label-title" for="loginPassword">Password</label>
+              <div class="auth-input-wrap password-input-wrapper"><i class="fa-solid fa-lock" aria-hidden="true"></i>
+                <input type="password" id="loginPassword" class="form-input-text" placeholder="Enter your password" autocomplete="off" minlength="6" required>
+                <button type="button" class="password-toggle-eye" aria-label="Show password" aria-pressed="false"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+              </div>
             </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; margin-top: 1rem;">
-            Register & Launch Dashboard <i class="fa-solid fa-user-plus"></i>
-          </button>
-        </form>
-
-        <p style="font-size: 0.7rem; color: var(--text-muted); text-align: center; margin-top: 1.25rem;">
-          <i class="fa-solid fa-info-circle"></i> College Mini-Project Demonstration Environment. Credentials stored in browser LocalStorage.
-        </p>
-      </div>
+            <div class="form-group-field">
+              <label class="form-label-title" for="loginRole">Choose a role <span class="auth-prototype-label">Prototype selection</span></label>
+              <div class="auth-input-wrap auth-role-wrap"><i class="fa-solid fa-user-tag" aria-hidden="true"></i>
+                <select id="loginRole" class="form-select-custom" required>
+                  <option value="Contractor / Admin">Contractor / Admin</option>
+                  <option value="Site Engineer / Supervisor">Site Engineer / Supervisor</option>
+                  <option value="Storekeeper">Storekeeper</option>
+                  <option value="Client / Project Owner">Client / Project Owner</option>
+                </select>
+              </div>
+            </div>
+            <div class="auth-form-options">
+              <label class="auth-remember-label"><input type="checkbox" id="rememberMe"><span>Remember my email</span></label>
+              <span class="auth-secure-note"><i class="fa-solid fa-helmet-safety"></i> Contractor workspace</span>
+            </div>
+            <button type="submit" class="auth-submit-btn">Sign in <i class="fa-solid fa-arrow-right"></i></button>
+          </form>
+          <div class="auth-prototype-note"><i class="fa-solid fa-circle-info"></i><span>Prototype sign in and role selection. Authentication and server-side authorization are not connected; your password is never saved.</span></div>
+        </div>
+        <div class="auth-form-footer">© 2026 BuildTrack <span>•</span> Construction management, made clearer.</div>
+      </section>
     </div>
   </div>
 
   <!-- ========================================================================
        MAIN APPLICATION LAYOUT
        ======================================================================== -->
-  <div class="app-layout">
+  <div class="app-layout auth-locked">
     
     <!-- SIDEBAR NAVIGATION -->
     <aside class="sidebar" id="mainSidebar">
@@ -1349,7 +1323,7 @@
                       </div>
                       <div class="form-group-field">
                         <label class="form-label-title" for="profileUserRole">System Role</label>
-                        <input type="text" id="profileUserRole" class="form-input-text" value="Principal Contractor">
+                        <input type="text" id="profileUserRole" class="form-input-text" value="Contractor / Admin" readonly>
                       </div>
                     </div>
                     <button type="submit" class="btn btn-primary">Update Profile</button>

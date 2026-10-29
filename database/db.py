@@ -101,7 +101,7 @@ _DELETE_TABLES = {
     "tasks", "workers", "materials", "expenses", "payments", "progress_reports",
 }
 
-_SINGLETON_TABLES = {"company_settings", "user_profiles"}
+_SINGLETON_TABLES = {"company_settings"}
 
 
 def _scope_project_id(project_id: str | None) -> str | None:
@@ -250,23 +250,39 @@ def save_record(
     values = dict(record)
     if table in _SINGLETON_TABLES:
         values.setdefault("id", 1)
-    if "id" not in values or values["id"] is None:
+    if table == "user_profiles" and values.get("id") is None:
+        values.pop("id", None)
+    if table != "user_profiles" and ("id" not in values or values["id"] is None):
         raise ValueError(f"{table} records require an id")
-    if len(values) == 1:
+    if len(values) == 1 and "id" in values:
         raise ValueError(f"Provide at least one field to save for {table}")
 
     with transaction(path) as connection:
         connection.execute("BEGIN IMMEDIATE")
-        current = connection.execute(
-            f"SELECT * FROM {table} WHERE id = ?", (values["id"],)
-        ).fetchone()
+        # Preserve the old profile upsert behavior for callers that omit IDs:
+        # an existing email is updated, while a new email gets an auto ID.
+        if table == "user_profiles" and "id" not in values and values.get("email"):
+            existing = connection.execute(
+                "SELECT id FROM user_profiles WHERE email = ? COLLATE NOCASE",
+                (values["email"],),
+            ).fetchone()
+            if existing is not None:
+                values["id"] = existing["id"]
+
+        current = None
+        if "id" in values:
+            current = connection.execute(
+                f"SELECT * FROM {table} WHERE id = ?", (values["id"],)
+            ).fetchone()
         if current is None:
             columns = tuple(values)
-            connection.execute(
+            cursor = connection.execute(
                 f"INSERT INTO {table} ({', '.join(columns)}) "
                 f"VALUES ({', '.join('?' for _ in columns)})",
                 tuple(values[column] for column in columns),
             )
+            if table == "user_profiles" and "id" not in values:
+                values["id"] = cursor.lastrowid
         else:
             merged = dict(current)
             merged.update(values)

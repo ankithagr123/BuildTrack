@@ -11,12 +11,12 @@ Because BuildTrack is built with standard HTML5, CSS3, and modern Vanilla JavaSc
 ### Option 1: Direct Browser Launch (Simplest)
 1. Navigate to the `Buildtrackk` folder.
 2. Double-click `index.html` to open it in **Google Chrome**, **Microsoft Edge**, **Mozilla Firefox**, or **Brave**.
-3. The demo login screen will appear with quick 1-click autofill buttons!
+3. The BuildTrack sign-in prototype will appear.
 
 ### Option 2: Live Server in VS Code (Recommended for Development)
 1. Open the `Buildtrackk` folder in **Visual Studio Code**.
 2. Right-click on `index.html` and select **"Open with Live Server"** (or press `Alt + L, Alt + O`).
-3. Your browser will launch `http://127.0.0.1:5500/index.html`.
+3. Your browser will launch `http://127.0.0.1:5500/index.html` and show the BuildTrack sign-in page before the dashboard.
 
 ### Option 3: Python Built-In Web Server
 Open PowerShell or Terminal in the `Buildtrackk` folder and run:
@@ -27,16 +27,22 @@ Then visit `http://localhost:8000` in your browser.
 
 ---
 
-## 🔑 Demo Login Credentials
+## 🔑 Sign-In Prototype
 
-The application includes a prototype authentication system with built-in 1-click autofill buttons:
+The sign-in screen is a frontend prototype; no authentication API is connected. Enter a valid email and any password of at least six characters, then choose a role to continue. The password is checked in memory and is never saved. “Remember my email” stores only the email address in browser LocalStorage. Role selection is a UI demonstration and does not verify identity or provide security.
 
-| User Role | Email | Password |
+### Prototype role access
+
+| Role | Available modules | Prototype actions |
 |---|---|---|
-| **Principal Contractor / Admin** | `admin@buildtrack.com` | `admin123` |
-| **Senior Site Engineer** | `engineer@buildtrack.com` | `build2026` |
+| Contractor / Admin | All existing modules | All current dashboard actions |
+| Site Engineer / Supervisor | Projects, Tasks, Labour, Progress Diary, Reports | Create/update tasks, mark attendance, add daily reports; project details and reports are read-only |
+| Storekeeper | Materials | Manage inventory and record stock in/out using existing workflows |
+| Client / Project Owner | Projects, Progress Diary, Reports | Read-only; create, edit, and delete controls are hidden or blocked in the UI |
 
-*Note: You can also register any new contractor account with an email and 6-character password.*
+These role filters are frontend-only and can be bypassed by a user with browser developer tools. A backend must verify credentials, hash passwords, issue authenticated sessions, enforce roles server-side, and reject unauthorized writes before deployment.
+
+To try each role locally, sign in with a valid email and a password of at least six characters, select a role, and inspect its sidebar and available actions. Use the dashboard sign-out control to return to the role selector, then choose another role. Reloading always returns to sign-in; an older saved display profile does not bypass it.
 
 ---
 

@@ -61,12 +61,50 @@ class DatabaseTests(unittest.TestCase):
     def test_initialization_tables_columns_and_foreign_keys(self):
         with transaction(self.path) as connection:
             self.assertEqual(connection.execute("PRAGMA foreign_keys").fetchone()[0], 1)
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 4)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 5)
             tables = {r[0] for r in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             self.assertTrue(set(EXPECTED_COLUMNS).issubset(tables))
             for table, expected in EXPECTED_COLUMNS.items():
                 actual = {r[1] for r in connection.execute(f"PRAGMA table_info({table})")}
                 self.assertEqual(actual, expected, table)
+
+    def test_user_profiles_support_multiple_unique_emails_and_agreed_roles(self):
+        first = save_record("user_profiles", {
+            "name": "Admin", "role": "Contractor / Admin",
+            "email": "admin@example.test",
+        }, self.path)
+        second = save_record("user_profiles", {
+            "name": "Store Team", "role": "Storekeeper",
+            "email": "store@example.test",
+        }, self.path)
+        third = save_record("user_profiles", {
+            "id": None, "name": "Engineer", "role": "Site Engineer / Supervisor",
+            "email": "engineer@example.test",
+        }, self.path)
+        fourth = save_record("user_profiles", {
+            "name": "Client", "role": "Client / Project Owner",
+            "email": "client@example.test",
+        }, self.path)
+        self.assertEqual((first["id"], second["id"], third["id"], fourth["id"]), (1, 2, 3, 4))
+
+        updated = save_record("user_profiles", {
+            "name": "Updated Admin", "role": "Contractor / Admin",
+            "email": "ADMIN@example.test",
+        }, self.path)
+        self.assertEqual(updated["id"], first["id"])
+        self.assertEqual(len(list_records("user_profiles", path=self.path)), 4)
+
+        with transaction(self.path) as connection:
+            with self.assertRaises(sqlite3.IntegrityError):
+                connection.execute(
+                    "INSERT INTO user_profiles(name,role,email) VALUES (?,?,?)",
+                    ("Bad Role", "Engineer", "bad-role@example.test"),
+                )
+            with self.assertRaises(sqlite3.IntegrityError):
+                connection.execute(
+                    "INSERT INTO user_profiles(name,role,email) VALUES (?,?,?)",
+                    ("Duplicate Email", "Storekeeper", "admin@EXAMPLE.test"),
+                )
 
     def test_foreign_key_rejects_orphan_and_restricts_project_delete(self):
         with transaction(self.path) as connection:
@@ -167,6 +205,45 @@ class DatabaseTests(unittest.TestCase):
             connection.execute("UPDATE tasks SET start_date=NULL WHERE id='T1'")
             connection.execute("UPDATE materials SET last_updated=NULL WHERE id='M1'")
 
+    def test_version_4_profile_migration_preserves_profile_and_allows_multiple_users(self):
+        legacy_path = Path(self.temp_dir.name) / "version4_profiles.sqlite3"
+        legacy = sqlite3.connect(legacy_path)
+        try:
+            legacy.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+            legacy.execute("DROP TABLE user_profiles")
+            legacy.execute(
+                "CREATE TABLE user_profiles ("
+                "id INTEGER PRIMARY KEY CHECK (id = 1), name TEXT NOT NULL, "
+                "role TEXT NOT NULL, email TEXT NOT NULL, avatar TEXT NOT NULL DEFAULT '')"
+            )
+            legacy.execute(
+                "INSERT INTO user_profiles(id,name,role,email,avatar) "
+                "VALUES (1,'Legacy Profile','Senior Civil Engineer','legacy@example.test','legacy.svg')"
+            )
+            legacy.execute(
+                "INSERT INTO projects(id,name,client,location,manager,start_date,expected_completion_date,budget,status) "
+                "VALUES ('P1','Keep Project','Client','Here','Manager','2026-01-01','2026-12-31',10000,'planning')"
+            )
+            legacy.execute("PRAGMA user_version = 4")
+            legacy.commit()
+        finally:
+            legacy.close()
+
+        initialize_database(legacy_path)
+        initialize_database(legacy_path)
+        with transaction(legacy_path) as connection:
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 5)
+            profile = connection.execute("SELECT * FROM user_profiles").fetchone()
+            self.assertEqual(tuple(profile), (
+                1, "Legacy Profile", "Site Engineer / Supervisor",
+                "legacy@example.test", "legacy.svg",
+            ))
+            self.assertEqual(connection.execute("SELECT name FROM projects WHERE id='P1'").fetchone()[0], "Keep Project")
+            connection.execute(
+                "INSERT INTO user_profiles(name,role,email) VALUES ('Client','Client / Project Owner','client@example.test')"
+            )
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM user_profiles").fetchone()[0], 2)
+
     def test_version_3_date_migration_preserves_rows_and_adds_strict_triggers(self):
         legacy_path = Path(self.temp_dir.name) / "version3.sqlite3"
         sql = SCHEMA_PATH.read_text(encoding="utf-8")
@@ -210,7 +287,7 @@ class DatabaseTests(unittest.TestCase):
             initialize_database(legacy_path)
         initialize_database(legacy_path)
         with transaction(legacy_path) as connection:
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 4)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 5)
             self.assertEqual(
                 connection.execute("SELECT start_date FROM projects WHERE id='P1'").fetchone()[0],
                 "2026-02-30",
@@ -461,7 +538,7 @@ class DatabaseTests(unittest.TestCase):
         }, self.path)
         self.assertEqual(settings["id"], 1)
         profile = save_record("user_profiles", {
-            "name": "Engineer", "role": "Site Engineer", "email": "site@example.test",
+            "name": "Engineer", "role": "Site Engineer / Supervisor", "email": "site@example.test",
         }, self.path)
         self.assertEqual(profile["id"], 1)
         self.assertEqual(get_record("company_settings", 1, self.path)["budget_threshold"], 90)
@@ -762,7 +839,7 @@ class DatabaseTests(unittest.TestCase):
         # A version-0 database from the earlier initializer is upgraded in place.
         initialize_database(legacy_path)
         with transaction(legacy_path) as connection:
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 4)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 5)
             self.assertEqual(connection.execute("SELECT name FROM projects WHERE id='P1'").fetchone()[0], "Keep")
             self.assertEqual(connection.execute("SELECT availability FROM workers WHERE id='W1'").fetchone()[0], "On Leave")
             self.assertEqual(connection.execute("SELECT status FROM attendance WHERE worker_id='W1'").fetchone()[0], "leave")
@@ -786,7 +863,7 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(trigger_count, 2)
         initialize_database(legacy_path)
         with transaction(legacy_path) as connection:
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 4)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 5)
             self.assertEqual(connection.execute("SELECT availability FROM workers WHERE id='W1'").fetchone()[0], "On Leave")
             self.assertEqual(connection.execute(
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='trigger' AND name LIKE 'workers_availability_%'"
@@ -847,7 +924,7 @@ class DatabaseTests(unittest.TestCase):
         initialize_database(legacy_path)
         initialize_database(legacy_path)
         with transaction(legacy_path) as connection:
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 4)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 5)
             self.assertEqual(connection.execute("SELECT budget FROM projects WHERE id='P1'").fetchone()[0], 5000)
             self.assertEqual(connection.execute("SELECT daily_wage FROM workers WHERE id='W1'").fetchone()[0], 100)
             with self.assertRaises(sqlite3.IntegrityError):

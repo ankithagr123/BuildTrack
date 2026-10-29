@@ -8,7 +8,7 @@ from pathlib import Path
 from .db import DATABASE_PATH, connect
 
 SCHEMA_PATH = Path(__file__).resolve().with_name("schema.sql")
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 def _migration_1(connection: sqlite3.Connection) -> None:
@@ -290,11 +290,67 @@ def _migration_4(connection: sqlite3.Connection) -> None:
                 )
 
 
+def _migration_5(connection: sqlite3.Connection) -> None:
+    """Allow multiple stakeholder profiles and constrain their assigned roles."""
+    exists = connection.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_profiles'"
+    ).fetchone()
+    if exists is None:
+        raise sqlite3.OperationalError(
+            "Cannot apply migration 5: expected table 'user_profiles' is missing"
+        )
+
+    connection.execute(
+        """CREATE TABLE user_profiles__migration_v5 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            role TEXT NOT NULL CHECK (role IN (
+                'Contractor / Admin', 'Site Engineer / Supervisor',
+                'Storekeeper', 'Client / Project Owner'
+            )),
+            email TEXT NOT NULL COLLATE NOCASE UNIQUE,
+            avatar TEXT NOT NULL DEFAULT ''
+        )"""
+    )
+    connection.execute(
+        """INSERT INTO user_profiles__migration_v5 (id, name, role, email, avatar)
+        SELECT id, name,
+            CASE lower(trim(role))
+                WHEN 'contractor / admin' THEN 'Contractor / Admin'
+                WHEN 'principal contractor' THEN 'Contractor / Admin'
+                WHEN 'principal contractor & engineer' THEN 'Contractor / Admin'
+                WHEN 'contractor' THEN 'Contractor / Admin'
+                WHEN 'admin' THEN 'Contractor / Admin'
+                WHEN 'site engineer / supervisor' THEN 'Site Engineer / Supervisor'
+                WHEN 'site engineer' THEN 'Site Engineer / Supervisor'
+                WHEN 'site in-charge' THEN 'Site Engineer / Supervisor'
+                WHEN 'site supervisor' THEN 'Site Engineer / Supervisor'
+                WHEN 'senior civil engineer' THEN 'Site Engineer / Supervisor'
+                WHEN 'senior site engineer' THEN 'Site Engineer / Supervisor'
+                WHEN 'civil site engineer' THEN 'Site Engineer / Supervisor'
+                WHEN 'senior project manager' THEN 'Site Engineer / Supervisor'
+                WHEN 'supervisor' THEN 'Site Engineer / Supervisor'
+                WHEN 'storekeeper' THEN 'Storekeeper'
+                WHEN 'client / project owner' THEN 'Client / Project Owner'
+                WHEN 'client' THEN 'Client / Project Owner'
+                WHEN 'project owner' THEN 'Client / Project Owner'
+                ELSE 'Contractor / Admin'
+            END,
+            email, avatar
+        FROM user_profiles"""
+    )
+    connection.execute("DROP TABLE user_profiles")
+    connection.execute(
+        "ALTER TABLE user_profiles__migration_v5 RENAME TO user_profiles"
+    )
+
+
 MIGRATIONS = {
     1: _migration_1,
     2: _migration_2,
     3: _migration_3,
     4: _migration_4,
+    5: _migration_5,
 }
 MIGRATIONS_REQUIRING_FOREIGN_KEYS_OFF = {2}
 

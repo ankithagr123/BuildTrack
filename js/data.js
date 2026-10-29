@@ -903,7 +903,7 @@
   // Demo User Session
   const defaultUser = {
     name: 'Er. Rajesh Kumar',
-    role: 'Principal Contractor & Engineer',
+    role: 'Contractor / Admin',
     email: 'admin@buildtrack.com',
     avatar: 'assets/avatar.png'
   };
@@ -1260,36 +1260,19 @@
       saveToStorage(STORAGE_KEYS.CURRENT_USER, user);
       return user;
     },
-    login: function (email, password) {
-      // Prototype demo credentials validation
-      const validCreds = [
-        { email: 'admin@buildtrack.com', pass: 'admin123', name: 'Er. Rajesh Kumar', role: 'Principal Contractor' },
-        { email: 'engineer@buildtrack.com', pass: 'build2026', name: 'Er. Vikram Shinde', role: 'Senior Civil Engineer' }
-      ];
-
-      const match = validCreds.find(c => c.email.toLowerCase() === email.trim().toLowerCase());
-      if (match && match.pass === password) {
+    login: function (email, password, role) {
+      // Frontend-only prototype validation: accept plausible inputs without storing passwords.
+      if (email.includes('@') && password.length >= 6 && window.BuildTrack.isSupportedRole(role)) {
         const user = {
-          name: match.name,
-          role: match.role,
-          email: match.email,
-          avatar: 'assets/avatar.png'
-        };
-        this.saveUser(user);
-        return { success: true, user };
-      }
-      // Allow any non-empty input for demonstration flexibility if requested, but check basic presence
-      if (email.includes('@') && password.length >= 6) {
-        const user = {
-          name: email.split('@')[0].toUpperCase(),
-          role: 'Site In-charge',
+          name: email.trim().split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()),
+          role,
           email: email.trim(),
           avatar: 'assets/avatar.png'
         };
         this.saveUser(user);
         return { success: true, user };
       }
-      return { success: false, message: 'Invalid credentials. Use demo credentials or email with min 6-char password.' };
+      return { success: false, message: 'Enter a valid email, a password with at least 6 characters, and select a listed role.' };
     },
     logout: function () {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
