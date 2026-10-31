@@ -21,25 +21,45 @@
     renderRiskWarningSummary();
   }
 
+  function getDashboardProjects() {
+    const projects = window.BuildTrack.getVisibleProjects();
+    const selectedProjectId = window.BuildTrack.currentProjectId || 'all';
+    return selectedProjectId === 'all' ? projects : projects.filter(project => project.id === selectedProjectId);
+  }
+
+  function getDashboardRecords(records, projectIdField = 'projectId') {
+    return window.BuildTrack.filterClientRecords(
+      records,
+      window.BuildTrack.currentProjectId || 'all',
+      projectIdField
+    );
+  }
+
   // --- 1. RENDER 10 KPI SUMMARY CARDS ---
   function renderKPIs() {
     const selectedProjectId = window.BuildTrack.currentProjectId || 'all';
-    const projects = window.DataStore.getProjects();
-    const tasks = window.DataStore.getTasks(selectedProjectId);
-    const labour = window.DataStore.getLabour(selectedProjectId);
-    const materials = window.DataStore.getMaterials(selectedProjectId);
-    const expenses = window.DataStore.getExpenses(selectedProjectId);
-
-    let filteredProjects = projects;
-    if (selectedProjectId !== 'all') {
-      filteredProjects = projects.filter(p => p.id === selectedProjectId);
-    }
+    const filteredProjects = getDashboardProjects();
+    const tasks = getDashboardRecords(window.DataStore.getTasks(selectedProjectId));
+    const labour = getDashboardRecords(window.DataStore.getLabour(selectedProjectId), 'assignedProjectId');
+    const materials = getDashboardRecords(window.DataStore.getMaterials(selectedProjectId), 'assignedProjectId');
+    const expenses = getDashboardRecords(window.DataStore.getExpenses(selectedProjectId));
 
     // 1. Projects Breakdown
     const totalProjects = filteredProjects.length;
     const ongoingProjects = filteredProjects.filter(p => p.status === 'ongoing').length;
     const completedProjects = filteredProjects.filter(p => p.status === 'completed').length;
     const delayedProjects = filteredProjects.filter(p => p.status === 'delayed').length;
+    const averageProgress = filteredProjects.length
+      ? filteredProjects.reduce((sum, project) => sum + (parseFloat(project.progress) || 0), 0) / filteredProjects.length
+      : 0;
+
+    const dashboardSubtitle = document.querySelector('#view-dashboard .page-subtitle-muted');
+    if (dashboardSubtitle) {
+      dashboardSubtitle.dataset.defaultText ||= dashboardSubtitle.textContent;
+      dashboardSubtitle.textContent = window.BuildTrack.isClientRole()
+        ? `Assigned project metrics • Average progress: ${averageProgress.toFixed(1)}%`
+        : dashboardSubtitle.dataset.defaultText;
+    }
 
     // 2. Financials Breakdown
     const totalBudget = filteredProjects.reduce((sum, p) => sum + (parseFloat(p.budget) || 0), 0);
@@ -113,7 +133,7 @@
 
     if (chartInstances.budgetVsExpenses) chartInstances.budgetVsExpenses.destroy();
 
-    const projects = window.DataStore.getProjects();
+    const projects = getDashboardProjects();
     const labels = projects.map(p => p.name.length > 18 ? p.name.substring(0, 16) + '...' : p.name);
     const budgetsInLakhs = projects.map(p => (p.budget / 100000).toFixed(2));
     const spentInLakhs = projects.map(p => (p.spent / 100000).toFixed(2));
@@ -167,7 +187,7 @@
 
     if (chartInstances.monthlyExpenses) chartInstances.monthlyExpenses.destroy();
 
-    const expenses = window.DataStore.getExpenses();
+    const expenses = getDashboardRecords(window.DataStore.getExpenses());
     
     // Group expenses by Month (e.g. Jul, Aug, Sep, Oct)
     const monthMap = { '07': 0, '08': 0, '09': 0, '10': 0 };
@@ -180,8 +200,12 @@
       }
     });
 
-    const labels = ['Jul 2026', 'Aug 2026', 'Sep 2026', 'Oct 2026'];
-    const data = [3.5, 5.8, 8.4, (monthMap['10'] || 12.2).toFixed(1)];
+    let labels = ['Jul 2026', 'Aug 2026', 'Sep 2026', 'Oct 2026'];
+    let data = [3.5, 5.8, 8.4, (monthMap['10'] || 12.2).toFixed(1)];
+    if (window.BuildTrack.isClientRole()) {
+      labels = ['Jul 2026', 'Aug 2026', 'Sep 2026', 'Oct 2026'];
+      data = ['07', '08', '09', '10'].map(month => (monthMap[month] || 0).toFixed(1));
+    }
 
     chartInstances.monthlyExpenses = new Chart(ctx, {
       type: 'line',
@@ -229,7 +253,7 @@
 
     if (chartInstances.projectProgress) chartInstances.projectProgress.destroy();
 
-    const projects = window.DataStore.getProjects();
+    const projects = getDashboardProjects();
     const labels = projects.map(p => p.name.length > 20 ? p.name.substring(0, 18) + '...' : p.name);
     const progressData = projects.map(p => p.progress);
     
@@ -285,7 +309,7 @@
     if (chartInstances.expenseCategory) chartInstances.expenseCategory.destroy();
 
     const selectedProjectId = window.BuildTrack.currentProjectId || 'all';
-    const expenses = window.DataStore.getExpenses(selectedProjectId);
+    const expenses = getDashboardRecords(window.DataStore.getExpenses(selectedProjectId));
 
     const categories = { 'Materials': 0, 'Labour': 0, 'Equipment': 0, 'Transport': 0, 'Other': 0 };
     expenses.forEach(e => {
@@ -331,7 +355,7 @@
 
     if (chartInstances.labourAttendance) chartInstances.labourAttendance.destroy();
 
-    const labour = window.DataStore.getLabour();
+    const labour = getDashboardRecords(window.DataStore.getLabour(), 'assignedProjectId');
     const todayStr = new Date().toISOString().split('T')[0];
     const attendance = window.DataStore.getAttendance(todayStr);
 
@@ -371,7 +395,7 @@
 
     if (chartInstances.materialStock) chartInstances.materialStock.destroy();
 
-    const materials = window.DataStore.getMaterials().slice(0, 6);
+    const materials = getDashboardRecords(window.DataStore.getMaterials(), 'assignedProjectId').slice(0, 6);
     const labels = materials.map(m => m.name.split(' ')[0] + ' ' + (m.name.split(' ')[1] || ''));
     const currentStock = materials.map(m => m.quantity);
     const minThreshold = materials.map(m => m.minStockLevel);
@@ -414,7 +438,7 @@
     const container = document.getElementById('dashboardDeadlinesList');
     if (!container) return;
 
-    const projects = window.DataStore.getProjects();
+    const projects = getDashboardProjects();
     const sorted = [...projects].sort((a, b) => new Date(a.expectedCompletionDate) - new Date(b.expectedCompletionDate));
 
     container.innerHTML = sorted.slice(0, 4).map(p => `
@@ -433,7 +457,7 @@
     const container = document.getElementById('dashboardOverdueList');
     if (!container) return;
 
-    const tasks = window.DataStore.getTasks();
+    const tasks = getDashboardRecords(window.DataStore.getTasks());
     const today = new Date().toISOString().split('T')[0];
     const overdue = tasks.filter(t => t.status !== 'completed' && t.dueDate < today);
 
@@ -463,7 +487,7 @@
     const container = document.getElementById('dashboardRecentExpensesTable');
     if (!container) return;
 
-    const expenses = window.DataStore.getExpenses().slice(0, 5);
+    const expenses = getDashboardRecords(window.DataStore.getExpenses()).slice(0, 5);
     container.innerHTML = expenses.map(e => {
       const proj = window.DataStore.getProject(e.projectId);
       return `
@@ -483,8 +507,8 @@
     const container = document.getElementById('dashboardLabourAvailability');
     if (!container) return;
 
-    const projects = window.DataStore.getProjects();
-    const labour = window.DataStore.getLabour();
+    const projects = getDashboardProjects();
+    const labour = getDashboardRecords(window.DataStore.getLabour(), 'assignedProjectId');
 
     container.innerHTML = projects.slice(0, 4).map(p => {
       const count = labour.filter(w => w.assignedProjectId === p.id).length;
@@ -504,7 +528,7 @@
     const container = document.getElementById('dashboardLowStockAlerts');
     if (!container) return;
 
-    const materials = window.DataStore.getMaterials();
+    const materials = getDashboardRecords(window.DataStore.getMaterials(), 'assignedProjectId');
     const lowStock = materials.filter(m => m.quantity <= m.minStockLevel);
 
     if (lowStock.length === 0) {
@@ -530,7 +554,7 @@
     const container = document.getElementById('dashboardDailyProgressFeed');
     if (!container) return;
 
-    const reports = window.DataStore.getProgressReports().slice(0, 3);
+    const reports = getDashboardRecords(window.DataStore.getProgressReports()).slice(0, 3);
     container.innerHTML = reports.map(r => {
       const proj = window.DataStore.getProject(r.projectId);
       return `
@@ -558,11 +582,11 @@
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
         <div style="display: flex; align-items: center; gap: 1rem;">
           <div style="width: 44px; height: 44px; border-radius: 10px; background-color: rgba(249, 115, 22, 0.2); display: flex; align-items: center; justify-content: center; color: var(--accent-orange); font-size: 1.3rem;">
-            <i class="fa-solid fa-brain-circuit"></i>
+            <i class="fa-solid fa-shield-halved"></i>
           </div>
           <div>
-            <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff;">AI Risk Prediction Engine Active</div>
-            <div style="font-size: 0.78rem; color: #94a3b8;">1 High Budget Anomaly detected on Metro Flyover Pier Extension. 3 overdue tasks require intervention.</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff;">Rule-Based Risk Alerts Active</div>
+            <div style="font-size: 0.78rem; color: #94a3b8;">Checks cover expenditure variance, overdue tasks, material stock, and workforce attendance.</div>
           </div>
         </div>
         <button class="btn btn-sm btn-primary" onclick="BuildTrack.navigateTo('risks')">
@@ -593,6 +617,10 @@
       if (window.BuildTrack.currentView === 'dashboard') {
         initDashboard();
       }
+    });
+
+    window.addEventListener('buildtrack:clientchanged', () => {
+      if (window.BuildTrack.currentView === 'dashboard') initDashboard();
     });
 
     // Initial render

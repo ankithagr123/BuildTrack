@@ -6,10 +6,163 @@
 (function () {
   'use strict';
 
+  const ROLE_ACCESS = Object.freeze({
+    'Contractor / Admin': {
+      landingView: 'dashboard',
+      views: ['dashboard', 'projects', 'tasks', 'labour', 'materials', 'finance', 'progress', 'risks', 'reports', 'settings'],
+      capabilities: ['*']
+    },
+    'Site Engineer / Supervisor': {
+      landingView: 'tasks',
+      views: ['projects', 'tasks', 'labour', 'progress', 'reports'],
+      capabilities: ['tasks.write', 'labour.attendance', 'progress.write']
+    },
+    'Storekeeper': {
+      landingView: 'materials',
+      views: ['materials'],
+      capabilities: ['materials.write']
+    },
+    'Client / Project Owner': {
+      landingView: 'dashboard',
+      views: ['dashboard', 'projects', 'progress', 'reports'],
+      capabilities: []
+    }
+  });
+
+  const FORM_CAPABILITIES = Object.freeze({
+    projectAddEditForm: 'projects.write',
+    taskAddEditForm: 'tasks.write',
+    workerAddEditForm: 'labour.write',
+    materialAddEditForm: 'materials.write',
+    materialStockActionForm: 'materials.write',
+    expenseAddEditForm: 'finance.write',
+    paymentAddEditForm: 'finance.write',
+    dailyProgressForm: 'progress.write',
+    companySettingsForm: 'settings.write',
+    userProfileForm: 'settings.write'
+  });
+
+  // Client assignments are derived from the actual project records. No client
+  // IDs or project fields are invented for this frontend-only prototype.
+  function getClientProjectAssignments() {
+    const assignments = Object.create(null);
+    const projects = window.DataStore ? window.DataStore.getProjects() : [];
+    projects.forEach(project => {
+      const clientName = (project.client || '').trim();
+      if (!clientName || !project.id) return;
+      if (!assignments[clientName]) assignments[clientName] = [];
+      assignments[clientName].push(project.id);
+    });
+    return assignments;
+  }
+
+  function hasRoleCapability(capability) {
+    const access = ROLE_ACCESS[window.BuildTrack.currentRole];
+    return !!access && (access.capabilities.includes('*') || access.capabilities.includes(capability));
+  }
+
+  function actionCapability(element) {
+    const inlineAction = `${element.getAttribute('onclick') || ''} ${element.getAttribute('onchange') || ''}`;
+    if (/ProjectsController\.(openAddModal|openEditModal|confirmDelete)\(/.test(inlineAction)) return 'projects.write';
+    if (/TasksController\./.test(inlineAction)) return 'tasks.write';
+    if (/LabourController\.setAttendance|markAllPresent/.test(inlineAction)) return 'labour.attendance';
+    if (/LabourController\./.test(inlineAction)) return 'labour.write';
+    if (/MaterialsController\.(openAddModal|openEditModal|confirmDelete|openStockActionModal)\(/.test(inlineAction)) return 'materials.write';
+    if (/FinanceController\./.test(inlineAction)) return 'finance.write';
+    if (/ProgressController\.(openAddModal|confirmDelete)\(/.test(inlineAction)) return 'progress.write';
+    if (element.id === 'markAllPresentBtn') return 'labour.attendance';
+    const form = element.closest('form');
+    return form ? FORM_CAPABILITIES[form.id] || null : null;
+  }
+
+  function applyRoleAccess() {
+    const role = window.BuildTrack.currentRole;
+    const access = ROLE_ACCESS[role];
+    if (!access) return;
+
+    document.querySelectorAll('.nav-item-link[data-view]').forEach(link => {
+      const restricted = !access.views.includes(link.dataset.view);
+      link.classList.toggle('role-access-hidden', restricted);
+      link.closest('li')?.classList.toggle('role-access-hidden', restricted);
+    });
+    document.querySelectorAll('.nav-section-title').forEach(title => {
+      const navList = title.nextElementSibling;
+      if (navList && navList.classList.contains('sidebar-nav-list')) {
+        title.classList.toggle('role-access-hidden', !navList.querySelector('.nav-item-link:not(.role-access-hidden)'));
+      }
+    });
+
+    const quickCreate = document.querySelector('.quick-action-dropdown-wrap');
+    if (quickCreate) quickCreate.classList.toggle('role-access-hidden', !hasRoleCapability('admin.utilities'));
+    const notifications = document.getElementById('topbarNotifBtn')?.parentElement;
+    if (notifications) notifications.classList.toggle('role-access-hidden', !hasRoleCapability('admin.utilities'));
+    const globalSearch = document.querySelector('.global-search-bar');
+    if (globalSearch) globalSearch.classList.toggle('role-access-hidden', !hasRoleCapability('admin.utilities'));
+
+    document.querySelectorAll('.app-layout [onclick], .app-layout [onchange]').forEach(element => {
+      const capability = actionCapability(element);
+      if (capability) element.classList.toggle('role-access-hidden', !hasRoleCapability(capability));
+    });
+    Object.keys(FORM_CAPABILITIES).forEach(formId => {
+      const form = document.getElementById(formId);
+      if (!form) return;
+      const restricted = !hasRoleCapability(FORM_CAPABILITIES[formId]);
+      form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(button => {
+        button.classList.toggle('role-access-hidden', restricted);
+      });
+    });
+  }
+
+  function setMobileNavOpen(isOpen) {
+    const sidebar = document.getElementById('mainSidebar');
+    const menuButton = document.getElementById('mobileMenuBtn');
+    if (!sidebar) return;
+    sidebar.classList.toggle('mobile-open', isOpen);
+    document.body.classList.toggle('mobile-nav-open', isOpen);
+    if (menuButton) {
+      menuButton.setAttribute('aria-expanded', String(isOpen));
+      menuButton.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+    }
+  }
+
   // Master Global BuildTrack Object
   window.BuildTrack = {
     currentView: 'dashboard',
     currentProjectId: 'all',
+    currentRole: null,
+    currentClientIdentity: null,
+    isClientRole: function () {
+      return this.currentRole === 'Client / Project Owner';
+    },
+    getClientProjectAssignments: getClientProjectAssignments,
+    getClientIdentities: function () {
+      return Object.keys(getClientProjectAssignments()).sort((a, b) => a.localeCompare(b));
+    },
+    getClientProjectIds: function (clientName = this.currentClientIdentity) {
+      return getClientProjectAssignments()[clientName] || [];
+    },
+    getVisibleProjects: function () {
+      const projects = window.DataStore.getProjects();
+      if (!this.isClientRole()) return projects;
+      const assignedIds = new Set(this.getClientProjectIds());
+      return projects.filter(project => assignedIds.has(project.id));
+    },
+    filterClientRecords: function (records, projectFilter = 'all', projectIdField = 'projectId', includeUnassigned = false) {
+      if (!this.isClientRole()) return records;
+      const assignedIds = new Set(this.getClientProjectIds());
+      if (projectFilter !== 'all' && !assignedIds.has(projectFilter)) return [];
+      return records.filter(record => {
+        const projectId = record[projectIdField];
+        if (includeUnassigned && !projectId) return true;
+        return assignedIds.has(projectId) && (projectFilter === 'all' || projectId === projectFilter);
+      });
+    },
+    canAccessProject: function (projectId) {
+      return !this.isClientRole() || this.getClientProjectIds().includes(projectId);
+    },
+    isSupportedRole: function (role) {
+      return Object.prototype.hasOwnProperty.call(ROLE_ACCESS, role);
+    },
     
     // Format number to Indian Rupee (₹)
     formatINR: function (val) {
@@ -47,6 +200,11 @@
 
     // Navigation Switcher
     navigateTo: function (viewId) {
+      const access = ROLE_ACCESS[this.currentRole];
+      if (access && !access.views.includes(viewId)) {
+        this.showToast('This prototype role does not have access to that module.', 'warning');
+        viewId = access.landingView;
+      }
       const targetView = document.getElementById('view-' + viewId);
       if (!targetView) return;
 
@@ -65,12 +223,11 @@
 
       this.currentView = viewId;
       window.location.hash = viewId;
+      applyRoleAccess();
 
       // Close mobile sidebar if open
       const sidebar = document.getElementById('mainSidebar');
-      if (sidebar && sidebar.classList.contains('mobile-open')) {
-        sidebar.classList.remove('mobile-open');
-      }
+      if (sidebar && sidebar.classList.contains('mobile-open')) setMobileNavOpen(false);
 
       // Scroll to top
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -165,15 +322,19 @@
       if (!selector) return;
 
       const currentVal = selector.value || this.currentProjectId || 'all';
-      const projects = window.DataStore.getProjects();
+      const projects = this.getVisibleProjects();
 
-      let html = '<option value="all">📁 All Projects (Overview)</option>';
+      const allLabel = this.isClientRole() ? '📁 All Assigned Projects' : '📁 All Projects (Overview)';
+      let html = `<option value="all">${allLabel}</option>`;
       projects.forEach(p => {
         html += `<option value="${p.id}">${p.name}</option>`;
       });
 
       selector.innerHTML = html;
-      selector.value = currentVal;
+      selector.value = [...selector.options].some(option => option.value === currentVal) ? currentVal : 'all';
+
+      const projectsBadge = document.getElementById('sidebarProjectsBadge');
+      if (projectsBadge) projectsBadge.textContent = projects.length;
     },
 
     // Refresh Dynamic Notification Center
@@ -261,16 +422,47 @@
 
   // Initialization & Event Bindings
   document.addEventListener('DOMContentLoaded', function () {
-    // 1. Check Auth
-    const currentUser = window.DataStore.getUser();
+    // 1. Always start at sign-in. LocalStorage can contain a profile from an
+    // earlier prototype login, but it is not proof of an active session.
     const authOverlay = document.getElementById('authOverlay');
-    
-    if (window.DataStore.isLoggedIn()) {
-      authOverlay.classList.add('hidden');
-      updateUserProfileUI(currentUser);
-    } else {
-      authOverlay.classList.remove('hidden');
+    const appLayout = document.querySelector('.app-layout');
+    authOverlay.classList.remove('hidden');
+    if (appLayout) appLayout.classList.add('auth-locked');
+
+    // Reapply role visibility as existing controllers replace dynamic lists.
+    if (appLayout && window.MutationObserver) {
+      const roleObserver = new MutationObserver(applyRoleAccess);
+      roleObserver.observe(appLayout, { childList: true, subtree: true });
     }
+
+    document.addEventListener('click', function (event) {
+      const action = event.target.closest('[onclick], #markAllPresentBtn');
+      const capability = action && actionCapability(action);
+      if (capability && !hasRoleCapability(capability)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.BuildTrack.showToast('This action is unavailable for the selected prototype role.', 'warning');
+      }
+    }, true);
+
+    document.addEventListener('change', function (event) {
+      const action = event.target.closest('[onchange]');
+      const capability = action && actionCapability(action);
+      if (capability && !hasRoleCapability(capability)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.BuildTrack.showToast('This action is unavailable for the selected prototype role.', 'warning');
+      }
+    }, true);
+
+    document.addEventListener('submit', function (event) {
+      const capability = FORM_CAPABILITIES[event.target.id];
+      if (capability && !hasRoleCapability(capability)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.BuildTrack.showToast('This action is unavailable for the selected prototype role.', 'warning');
+      }
+    }, true);
 
     // 2. Initialize Topbar Selectors
     window.BuildTrack.updateProjectSelector();
@@ -293,6 +485,7 @@
     const sidebar = document.getElementById('mainSidebar');
     const toggleBtn = document.getElementById('sidebarToggleBtn');
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
 
     if (toggleBtn && sidebar) {
       toggleBtn.addEventListener('click', () => {
@@ -302,9 +495,14 @@
 
     if (mobileMenuBtn && sidebar) {
       mobileMenuBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('mobile-open');
+        setMobileNavOpen(!sidebar.classList.contains('mobile-open'));
       });
     }
+    if (sidebarBackdrop) sidebarBackdrop.addEventListener('click', () => setMobileNavOpen(false));
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && sidebar?.classList.contains('mobile-open')) setMobileNavOpen(false);
+    });
+    sidebar?.querySelector('.brand-link')?.addEventListener('click', () => setMobileNavOpen(false));
 
     // 6. Global Project Filter Change
     const projectSelect = document.getElementById('globalProjectSelect');
@@ -369,8 +567,14 @@
     // 11. Auth Form Handling
     setupAuthListeners();
 
-    // 12. Quick Autofill Demo Credentials
-    setupDemoCredentials();
+    // Restore only the remembered email address; never persist the password.
+    const rememberedEmail = localStorage.getItem('buildtrack_remembered_email');
+    const emailInput = document.getElementById('loginEmail');
+    const rememberMe = document.getElementById('rememberMe');
+    if (rememberedEmail && emailInput && rememberMe) {
+      emailInput.value = rememberedEmail;
+      rememberMe.checked = true;
+    }
   });
 
   // UI User Profile updater
@@ -391,40 +595,49 @@
   // Setup Authentication Listeners
   function setupAuthListeners() {
     const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-    const tabLogin = document.getElementById('tabAuthLogin');
-    const tabRegister = document.getElementById('tabAuthRegister');
     const authOverlay = document.getElementById('authOverlay');
+    const roleSelector = document.getElementById('loginRole');
+    const clientIdentityGroup = document.getElementById('clientIdentityGroup');
+    const clientIdentitySelector = document.getElementById('loginClientIdentity');
 
-    // Switch between Login and Register tabs
-    if (tabLogin && tabRegister) {
-      tabLogin.addEventListener('click', () => {
-        tabLogin.classList.add('active');
-        tabRegister.classList.remove('active');
-        if (loginForm) loginForm.style.display = 'block';
-        if (registerForm) registerForm.style.display = 'none';
-      });
-
-      tabRegister.addEventListener('click', () => {
-        tabRegister.classList.add('active');
-        tabLogin.classList.remove('active');
-        if (loginForm) loginForm.style.display = 'none';
-        if (registerForm) registerForm.style.display = 'block';
-      });
+    function refreshClientIdentityOptions() {
+      if (!clientIdentitySelector) return;
+      const currentIdentity = clientIdentitySelector.value;
+      const identities = window.BuildTrack.getClientIdentities();
+      clientIdentitySelector.innerHTML = '<option value="">Select a client</option>' + identities.map(name =>
+        `<option value="${name}">${name}</option>`
+      ).join('');
+      if (identities.includes(currentIdentity)) clientIdentitySelector.value = currentIdentity;
     }
+
+    function updateClientIdentityField() {
+      const isClient = roleSelector?.value === 'Client / Project Owner';
+      if (clientIdentityGroup) clientIdentityGroup.hidden = !isClient;
+      if (clientIdentitySelector) {
+        clientIdentitySelector.required = !!isClient;
+        if (!isClient) clientIdentitySelector.value = '';
+      }
+    }
+
+    refreshClientIdentityOptions();
+    updateClientIdentityField();
+    roleSelector?.addEventListener('change', updateClientIdentityField);
 
     // Show/Hide Password
     document.querySelectorAll('.password-toggle-eye').forEach(eye => {
       eye.addEventListener('click', function () {
         const input = this.previousElementSibling;
+        const icon = this.querySelector('i');
         if (input && input.type === 'password') {
           input.type = 'text';
-          this.classList.remove('fa-eye');
-          this.classList.add('fa-eye-slash');
+          this.setAttribute('aria-label', 'Hide password');
+          this.setAttribute('aria-pressed', 'true');
+          if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
         } else if (input) {
           input.type = 'password';
-          this.classList.remove('fa-eye-slash');
-          this.classList.add('fa-eye');
+          this.setAttribute('aria-label', 'Show password');
+          this.setAttribute('aria-pressed', 'false');
+          if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
         }
       });
     });
@@ -435,39 +648,38 @@
         e.preventDefault();
         const email = document.getElementById('loginEmail').value;
         const pass = document.getElementById('loginPassword').value;
+        const role = document.getElementById('loginRole').value;
+        const rememberEmail = document.getElementById('rememberMe').checked;
+        const clientIdentity = clientIdentitySelector?.value || '';
 
-        const res = window.DataStore.login(email, pass);
-        if (res.success) {
-          authOverlay.classList.add('hidden');
-          updateUserProfileUI(res.user);
-          window.BuildTrack.showToast(`Welcome back, ${res.user.name}!`, 'success');
-          window.BuildTrack.navigateTo('dashboard');
-        } else {
-          window.BuildTrack.showToast(res.message, 'error');
-        }
-      });
-    }
-
-    // Register Form Submit
-    if (registerForm) {
-      registerForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        const name = document.getElementById('regName').value;
-        const email = document.getElementById('regEmail').value;
-        const role = document.getElementById('regRole').value;
-        const pass = document.getElementById('regPassword').value;
-
-        if (!name || !email || pass.length < 6) {
-          window.BuildTrack.showToast('Please provide valid details (Password min 6 characters).', 'warning');
+        if (role === 'Client / Project Owner' && !window.BuildTrack.getClientProjectIds(clientIdentity).length) {
+          window.BuildTrack.showToast('Choose a client with an assigned project to continue.', 'error');
           return;
         }
 
-        const user = { name, email, role, avatar: 'assets/avatar.png' };
-        window.DataStore.saveUser(user);
-        authOverlay.classList.add('hidden');
-        updateUserProfileUI(user);
-        window.BuildTrack.showToast(`Account created successfully! Welcome to BuildTrack.`, 'success');
-        window.BuildTrack.navigateTo('dashboard');
+        const res = window.DataStore.login(email, pass, role);
+        if (res.success) {
+          if (rememberEmail) localStorage.setItem('buildtrack_remembered_email', email.trim());
+          else localStorage.removeItem('buildtrack_remembered_email');
+          window.BuildTrack.currentRole = res.user.role;
+          window.BuildTrack.currentClientIdentity = role === 'Client / Project Owner' ? clientIdentity : null;
+          window.BuildTrack.currentProjectId = 'all';
+          applyRoleAccess();
+          window.BuildTrack.updateProjectSelector();
+          window.dispatchEvent(new CustomEvent('buildtrack:clientchanged', {
+            detail: { clientName: window.BuildTrack.currentClientIdentity }
+          }));
+          authOverlay.classList.add('hidden');
+          document.querySelector('.app-layout')?.classList.remove('auth-locked');
+          const displayUser = role === 'Client / Project Owner'
+            ? { ...res.user, name: clientIdentity }
+            : res.user;
+          updateUserProfileUI(displayUser);
+          window.BuildTrack.showToast(`Welcome back, ${displayUser.name}!`, 'success');
+          window.BuildTrack.navigateTo(ROLE_ACCESS[res.user.role].landingView);
+        } else {
+          window.BuildTrack.showToast(res.message, 'error');
+        }
       });
     }
 
@@ -481,34 +693,18 @@
           confirmClass: 'btn-outline',
           onConfirm: () => {
             window.DataStore.logout();
+            window.BuildTrack.currentRole = null;
+            window.BuildTrack.currentClientIdentity = null;
+            window.BuildTrack.currentProjectId = 'all';
+            window.BuildTrack.updateProjectSelector();
+            document.querySelector('.app-layout')?.classList.add('auth-locked');
+            document.getElementById('loginPassword').value = '';
             authOverlay.classList.remove('hidden');
             window.BuildTrack.showToast('You have been logged out safely.', 'info');
           }
         });
       });
     });
-  }
-
-  // Quick Demo Credentials Autofill
-  function setupDemoCredentials() {
-    const fillAdminBtn = document.getElementById('fillAdminCreds');
-    const fillEngBtn = document.getElementById('fillEngineerCreds');
-
-    if (fillAdminBtn) {
-      fillAdminBtn.addEventListener('click', () => {
-        document.getElementById('loginEmail').value = 'admin@buildtrack.com';
-        document.getElementById('loginPassword').value = 'admin123';
-        window.BuildTrack.showToast('Admin demo credentials populated!', 'info', 1500);
-      });
-    }
-
-    if (fillEngBtn) {
-      fillEngBtn.addEventListener('click', () => {
-        document.getElementById('loginEmail').value = 'engineer@buildtrack.com';
-        document.getElementById('loginPassword').value = 'build2026';
-        window.BuildTrack.showToast('Site Engineer credentials populated!', 'info', 1500);
-      });
-    }
   }
 
 })();
