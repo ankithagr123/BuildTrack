@@ -3,8 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BuildTrack — AI-Based Construction Management & Risk Prediction System</title>
-  <meta name="description" content="Centralized construction management platform for small and medium contractors to monitor projects, budgets, labour, materials, daily progress, and risk prediction.">
+  <title>BuildTrack: Construction Project Management and Risk Prediction System</title>
+  <meta name="description" content="BuildTrack helps construction teams manage projects, tasks, labour, materials, finance, and progress with transparent rule-based risk alerts.">
+  <meta name="theme-color" content="#0b1329">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="BuildTrack">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
   
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
@@ -81,6 +88,15 @@
                 </select>
               </div>
             </div>
+            <div class="form-group-field" id="clientIdentityGroup" hidden>
+              <label class="form-label-title" for="loginClientIdentity">Client account</label>
+              <div class="auth-input-wrap auth-role-wrap"><i class="fa-solid fa-building-user" aria-hidden="true"></i>
+                <select id="loginClientIdentity" class="form-select-custom" aria-describedby="clientIdentityHelp">
+                  <option value="">Select a client</option>
+                </select>
+              </div>
+              <small class="form-help-text" id="clientIdentityHelp">Choose the client record linked to the project data you want to view.</small>
+            </div>
             <div class="auth-form-options">
               <label class="auth-remember-label"><input type="checkbox" id="rememberMe"><span>Remember my email</span></label>
               <span class="auth-secure-note"><i class="fa-solid fa-helmet-safety"></i> Contractor workspace</span>
@@ -97,6 +113,7 @@
   <!-- ========================================================================
        MAIN APPLICATION LAYOUT
        ======================================================================== -->
+  <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" aria-label="Close navigation"></button>
   <div class="app-layout auth-locked">
     
     <!-- SIDEBAR NAVIGATION -->
@@ -106,7 +123,7 @@
           <img src="assets/logo.svg" alt="BuildTrack" class="brand-logo-img">
           <div class="brand-text-wrap">
             <span class="brand-title">Build<span>Track</span></span>
-            <span class="brand-subtitle">AI Construction OS</span>
+            <span class="brand-subtitle">Construction Management System</span>
           </div>
         </a>
         <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Collapse / Expand Sidebar">
@@ -163,14 +180,14 @@
           </li>
         </ul>
 
-        <!-- Section 2: AI & Analytics -->
-        <div class="nav-section-title" style="margin-top: 1rem;">Intelligence & Audits</div>
+        <!-- Section 2: Risk & Analytics -->
+        <div class="nav-section-title" style="margin-top: 1rem;">Risk & Audits</div>
         <ul class="sidebar-nav-list">
           <li>
             <a href="#risks" class="nav-item-link" data-view="risks">
-              <i class="fa-solid fa-brain-circuit"></i>
+              <i class="fa-solid fa-shield-halved"></i>
               <span>Risk Intelligence</span>
-              <span class="nav-badge badge-risk">AI Engine</span>
+              <span class="nav-badge badge-risk">Risk Alerts</span>
             </a>
           </li>
           <li>
@@ -214,7 +231,7 @@
       <!-- TOP NAVIGATION BAR -->
       <header class="topbar">
         <div class="topbar-left">
-          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Navigation">
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open navigation" aria-controls="mainSidebar" aria-expanded="false">
             <i class="fa-solid fa-bars"></i>
           </button>
 
@@ -234,9 +251,12 @@
         </div>
 
         <div class="topbar-right">
+          <button class="install-app-btn" id="installAppBtn" type="button" hidden>
+            <i class="fa-solid fa-download" aria-hidden="true"></i><span>Install app</span>
+          </button>
           <!-- Quick Action Dropdown ("+ New") -->
           <div class="quick-action-dropdown-wrap">
-            <button class="btn-primary-accent" id="quickCreateBtn">
+            <button class="btn-primary-accent" id="quickCreateBtn" aria-label="Create a new record">
               <i class="fa-solid fa-plus"></i>
               <span>New Record</span>
               <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; margin-left: 2px;"></i>
@@ -312,7 +332,7 @@
             </div>
           </div>
 
-          <!-- Early-Warning AI Risk Alert Banner -->
+          <!-- Early-Warning Rule-Based Risk Alert Banner -->
           <div class="risk-engine-banner" id="dashboardRiskSummaryBanner" style="margin-bottom: 1.5rem; padding: 1.25rem;">
             <!-- Populated dynamically by dashboard.js -->
           </div>
@@ -1125,31 +1145,31 @@
         </section>
 
         <!-- ==================================================================
-             VIEW 8: AI-BASED RISK INTELLIGENCE CENTRE (CORE HIGHLIGHT)
+             VIEW 8: RULE-BASED RISK INTELLIGENCE CENTRE
              ================================================================== -->
         <section id="view-risks" class="view-page">
           <div class="page-header-row">
             <div class="page-title-wrap">
-              <h1 class="page-title-main"><i class="fa-solid fa-brain-circuit"></i> Risk Intelligence Centre</h1>
-              <span class="page-subtitle-muted">Heuristic anomaly detection engine predicting budget overruns, milestone delays, and supply chain bottlenecks</span>
+              <h1 class="page-title-main"><i class="fa-solid fa-shield-halved"></i> Risk Intelligence Centre</h1>
+              <span class="page-subtitle-muted">Rule-based checks flag budget variance, overdue work, low material stock, and attendance concerns.</span>
             </div>
             <div class="page-actions-group">
               <button class="btn btn-primary" id="riskRecalculateBtn">
-                <i class="fa-solid fa-arrows-rotate"></i> Recalculate Risk Engine
+                <i class="fa-solid fa-arrows-rotate"></i> Refresh Risk Alerts
               </button>
             </div>
           </div>
 
-          <!-- AI RISK ENGINE BANNER & GAUGE -->
+          <!-- RULE-BASED RISK ALERTS BANNER & GAUGE -->
           <div class="risk-engine-banner">
             <div class="risk-banner-content">
               <div>
                 <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-orange); font-weight: 700;">
-                  Heuristic Rule-Based Intelligence • Architecture Ready for Python ML Integration
+                  Rule-Based Checks • Current project data and transparent thresholds
                 </div>
                 <h2 style="font-size: 1.5rem; font-weight: 800; margin: 0.4rem 0;">Civil Construction Risk Matrix</h2>
                 <p style="font-size: 0.85rem; color: #94a3b8; max-width: 600px;">
-                  BuildTrack analyzes live cost-to-progress divergence, days remaining vs critical path tasks, worker attendance turnout, and inventory buffers to compute multi-variable risk alerts before cost overruns become irreversible.
+                  BuildTrack checks current expenditure against project progress, overdue tasks, worker attendance, and material stock thresholds to highlight records that may need review.
                 </p>
               </div>
 
@@ -1171,8 +1191,8 @@
 
           <!-- Prototype Transparency Note -->
           <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: var(--radius-md); padding: 0.75rem 1.25rem; margin-bottom: 1.5rem; font-size: 0.78rem; color: #475569;">
-            <i class="fa-solid fa-microchip" style="color: var(--accent-blue); margin-right: 4px;"></i>
-            <strong>Preliminary Heuristic Engine:</strong> Predictions are computed using transparent deterministic algorithms (Earned Value CPI/SPI ratios, burn divergence, stock thresholds). Clean Python Flask/Pandas ML service contracts (Random Forest / XGBoost) are planned for final backend deployment.
+            <i class="fa-solid fa-circle-info" style="color: var(--accent-blue); margin-right: 4px;"></i>
+            <strong>Rule-Based Risk Checks:</strong> Alerts use fixed conditions over current project data, including expenditure variance, overdue tasks, low stock, and attendance. This project does not implement AI or machine learning.
           </div>
 
           <!-- Detected Risk Cards Grid -->
@@ -2028,5 +2048,6 @@
   <script src="js/risks.js"></script>
   <script src="js/reports.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/pwa.js"></script>
 </body>
 </html>

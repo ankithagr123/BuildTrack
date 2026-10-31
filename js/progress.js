@@ -13,8 +13,12 @@
 
   function renderProgressView() {
     const selectedProjectId = window.BuildTrack.currentProjectId || 'all';
-    const reports = window.DataStore.getProgressReports(selectedProjectId);
-    const projects = window.DataStore.getProjects();
+    const reports = window.BuildTrack.filterClientRecords(
+      window.DataStore.getProgressReports(selectedProjectId),
+      selectedProjectId,
+      'projectId'
+    );
+    const projects = window.BuildTrack.getVisibleProjects();
 
     const searchInput = document.getElementById('progressSearchInput');
     const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
@@ -247,6 +251,10 @@
       if (window.BuildTrack.currentView === 'progress') {
         renderProgressView();
       }
+    });
+
+    window.addEventListener('buildtrack:clientchanged', () => {
+      if (window.BuildTrack.currentView === 'progress') renderProgressView();
     });
 
     initProgress();

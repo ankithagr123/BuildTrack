@@ -16,7 +16,7 @@
 
   // --- RENDER PROJECTS (CARDS & TABLE) ---
   function renderProjectsList() {
-    const projects = window.DataStore.getProjects();
+    const projects = window.BuildTrack.getVisibleProjects();
     const searchInput = document.getElementById('projectSearchInput');
     const statusFilter = document.getElementById('projectStatusFilter');
     const sortFilter = document.getElementById('projectSortFilter');
@@ -274,6 +274,10 @@
 
   // --- PROJECT DETAILS DEEP DIVE MODAL ---
   function openProjectDetails(projectId) {
+    if (!window.BuildTrack.canAccessProject(projectId)) {
+      window.BuildTrack.showToast('This project is not assigned to the selected client.', 'warning');
+      return;
+    }
     const project = window.DataStore.getProject(projectId);
     if (!project) return;
 
@@ -289,6 +293,7 @@
   }
 
   function renderProjectSubtabContent(projectId, tab) {
+    if (!window.BuildTrack.canAccessProject(projectId)) return;
     const project = window.DataStore.getProject(projectId);
     if (!project) return;
 
@@ -481,6 +486,10 @@
       if (window.BuildTrack.currentView === 'projects') {
         renderProjectsList();
       }
+    });
+
+    window.addEventListener('buildtrack:clientchanged', () => {
+      if (window.BuildTrack.currentView === 'projects') renderProjectsList();
     });
 
     initProjects();

@@ -1,7 +1,6 @@
 /**
  * BuildTrack - Construction Project Management & Risk Prediction System
- * Risk Intelligence Centre: Heuristic Rules Engine, Anomaly Detection & AI Recommendations
- * (Transparent Preliminary Risk Assessment Engine - Prepared for Python/Pandas ML Integration)
+ * Risk Intelligence Centre: Transparent rule-based checks and explanations
  */
 
 (function () {
@@ -14,7 +13,7 @@
     setupEventHandlers();
   }
 
-  // --- CORE RISK INFERENCE ENGINE ---
+  // --- CORE RULE-BASED RISK CHECKS ---
   function computeRiskAssessments() {
     const projects = window.DataStore.getProjects();
     const tasks = window.DataStore.getTasks();
@@ -47,7 +46,7 @@
           reason: `Expenditure burn rate is significantly outstripping physical site completion. ${budgetUtil.toFixed(1)}% of authorized budget spent while physical work is at ${p.progress}%.`,
           supportingData: `Budget: ${window.BuildTrack.formatINR(p.budget)} | Spent: ${window.BuildTrack.formatINR(p.spent)} | Utilization: ${budgetUtil.toFixed(1)}%`,
           recommendation: 'Freeze discretionary subcontracts immediately. Conduct quantitative quantity surveyor audit and renegotiate bulk supply rates.',
-          indicator: 'Cost Performance Index (CPI) < 0.78'
+          indicator: 'Budget use > 90% or expenditure exceeds progress by > 15 percentage points'
         });
       }
 
@@ -69,7 +68,7 @@
           reason: `Project timeline buffer has eroded. ${workRemaining}% of physical work remains with only ${daysRemaining > 0 ? daysRemaining : 0} days to scheduled delivery date.`,
           supportingData: `Overdue Tasks: ${overdueTasks.length} critical path items (${overdueTasks.map(t => t.title).join(', ') || 'Various'})`,
           recommendation: 'Authorize fast-tracking and staggered double-shift workforce. Compress shuttering cycle times using early-strength admixtures.',
-          indicator: 'Schedule Performance Index (SPI) < 0.82'
+          indicator: 'Delayed status, deadline within 30 days with > 25% work remaining, or at least 2 overdue tasks'
         });
       }
 
@@ -88,7 +87,7 @@
           reason: `Key structural raw materials have fallen below minimum buffer thresholds on site, risking idle plant machinery and crew stoppage.`,
           supportingData: `Depleted Materials: ${stockouts.map(m => `${m.name} (${m.quantity} ${m.unit} rem)`).join(', ')}`,
           recommendation: 'Issue immediate emergency purchase orders to secondary empanelled distributors. Fast-track delivery challans.',
-          indicator: 'Stock-to-Threshold Ratio < 0.45'
+          indicator: 'Material quantity at or below its minimum stock level'
         });
       }
 
@@ -135,7 +134,7 @@
   function renderRiskCentre() {
     const { assessments, portfolioHealth } = computeRiskAssessments();
 
-    // 1. Update Risk Engine Banner & Gauge
+    // 1. Update Rule-Based Risk Alert Banner & Gauge
     const gaugeEl = document.getElementById('riskPortfolioGauge');
     const scoreNum = document.getElementById('riskPortfolioScoreNum');
     const healthBadge = document.getElementById('riskHealthStatusBadge');
@@ -175,7 +174,7 @@
       cardsContainer.innerHTML = `
         <div style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--text-muted); background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
           <i class="fa-solid fa-shield-check" style="font-size: 3rem; color: var(--accent-emerald); margin-bottom: 1rem;"></i>
-          <h3>Zero Critical Risk Anomalies</h3>
+          <h3>No Risk Conditions Triggered</h3>
           <p style="font-size: 0.85rem; margin-top: 0.5rem;">All active projects are operating within expected budget, time, and inventory tolerances.</p>
         </div>
       `;
@@ -213,7 +212,7 @@
           </div>
         </div>
 
-        <!-- AI Corrective Action Recommendation -->
+        <!-- Corrective action suggested by the triggered rule -->
         <div class="risk-recommendation-box">
           <div class="risk-rec-title">
             <i class="fa-solid fa-lightbulb"></i> Recommended Corrective Action
@@ -286,8 +285,8 @@
         }
 
         <div style="margin-top: 1.5rem; padding: 0.75rem; background: #eff6ff; border: 1px dashed #93c5fd; border-radius: var(--radius-md); font-size: 0.75rem; color: #1e40af;">
-          <strong><i class="fa-solid fa-code-branch"></i> Future Backend / ML Pipeline Integration Hook:</strong>
-          <p style="margin-top: 3px;">In the proposed final semester architecture, this view will ingest real-time predictions from a Python Flask microservice (<code>POST /api/v1/predict-risk</code>) powered by Pandas and Scikit-Learn Random Forest regression models trained on historic construction schedules.</p>
+          <strong><i class="fa-solid fa-circle-info"></i> How these alerts are calculated:</strong>
+          <p style="margin-top: 3px;">Each alert is triggered by a fixed condition evaluated against current project records. The rules check budget-to-progress variance, project status and overdue tasks, material reorder levels, and today's workforce attendance.</p>
         </div>
       `;
     }
@@ -296,10 +295,10 @@
   }
 
   function simulateRecalculation() {
-    window.BuildTrack.showToast('Recalculating site risk indices across 12 heuristic parameters...', 'info', 1500);
+    window.BuildTrack.showToast('Refreshing rule-based site risk checks...', 'info', 1500);
     setTimeout(() => {
       renderRiskCentre();
-      window.BuildTrack.showToast('Risk Intelligence Matrix refreshed successfully!', 'success');
+      window.BuildTrack.showToast('Rule-based risk alerts refreshed successfully.', 'success');
     }, 600);
   }
 

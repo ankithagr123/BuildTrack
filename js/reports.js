@@ -46,10 +46,18 @@
     const selector = document.getElementById('reportProjectFilter');
     if (!selector) return;
 
-    const projects = window.DataStore.getProjects();
-    selector.innerHTML = '<option value="all">All Projects Combined</option>' + projects.map(p => `
+    const projects = window.BuildTrack.getVisibleProjects();
+    const allLabel = window.BuildTrack.isClientRole() ? 'All Assigned Projects' : 'All Projects Combined';
+    const currentValue = selector.value;
+    selector.innerHTML = `<option value="all">${allLabel}</option>` + projects.map(p => `
       <option value="${p.id}">${p.name}</option>
     `).join('');
+    selector.value = [...selector.options].some(option => option.value === currentValue) ? currentValue : 'all';
+  }
+
+  function getReportProjects(projectFilter) {
+    const projects = window.BuildTrack.getVisibleProjects();
+    return projectFilter === 'all' ? projects : projects.filter(project => project.id === projectFilter);
   }
 
   // --- REPORT GENERATOR DISPATCHER ---
@@ -72,8 +80,7 @@
       if (titleEl) titleEl.textContent = 'Project Progress & Milestone Delivery Audit';
       if (subtitleEl) subtitleEl.textContent = `Generated on ${now} • Physical Completion & Schedule Tracking`;
 
-      let projects = window.DataStore.getProjects();
-      if (projectFilter !== 'all') projects = projects.filter(p => p.id === projectFilter);
+      const projects = getReportProjects(projectFilter);
 
       headers = ['Project ID', 'Project Name', 'Client', 'Manager', 'Deadline', 'Status', 'Physical Progress %'];
       rows = projects.map(p => [
@@ -88,15 +95,17 @@
 
       const avgProgress = projects.length > 0 ? (projects.reduce((s, p) => s + p.progress, 0) / projects.length).toFixed(1) : 0;
       stats = [
-        { label: 'Audited Projects', val: projects.length },
-        { label: 'Avg Portfolio Progress', val: `${avgProgress}%` },
-        { label: 'Delayed Sites', val: projects.filter(p => p.status === 'delayed').length }
+        { label: window.BuildTrack.isClientRole() ? 'Assigned Projects' : 'Audited Projects', val: projects.length },
+        { label: window.BuildTrack.isClientRole() ? 'Avg Assigned Project Progress' : 'Avg Portfolio Progress', val: `${avgProgress}%` },
+        { label: window.BuildTrack.isClientRole() ? 'Delayed Assigned Projects' : 'Delayed Sites', val: projects.filter(p => p.status === 'delayed').length }
       ];
     } else if (currentReportType === 'finance') {
       if (titleEl) titleEl.textContent = 'Budget vs Actual Construction Expenditure Report';
       if (subtitleEl) subtitleEl.textContent = `Generated on ${now} • Cost Audit & Spending Variance`;
 
-      let expenses = window.DataStore.getExpenses(projectFilter);
+      let expenses = window.BuildTrack.filterClientRecords(
+        window.DataStore.getExpenses(projectFilter), projectFilter, 'projectId'
+      );
       headers = ['Voucher ID', 'Expense Title', 'Category', 'Date', 'Payment Mode', 'Amount (INR)'];
       rows = expenses.map(e => [
         e.id,
@@ -108,16 +117,23 @@
       ]);
 
       const totalSpent = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+      const categoryTotals = expenses.reduce((totals, expense) => {
+        totals[expense.category] = (totals[expense.category] || 0) + (parseFloat(expense.amount) || 0);
+        return totals;
+      }, {});
+      const largestCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
       stats = [
         { label: 'Total Expense Vouchers', val: expenses.length },
         { label: 'Total Incurred Spend', val: window.BuildTrack.formatINR(totalSpent) },
-        { label: 'Largest Category', val: 'Materials' }
+        { label: 'Largest Category', val: largestCategory }
       ];
     } else if (currentReportType === 'labour') {
       if (titleEl) titleEl.textContent = 'Workforce Attendance & Wage Payout Audit';
       if (subtitleEl) subtitleEl.textContent = `Generated on ${now} • Daily Craftsmen Attendance & Labour Costing`;
 
-      const labour = window.DataStore.getLabour(projectFilter);
+      const labour = window.BuildTrack.filterClientRecords(
+        window.DataStore.getLabour(projectFilter), projectFilter, 'assignedProjectId'
+      );
       const today = new Date().toISOString().split('T')[0];
       const att = window.DataStore.getAttendance(today);
 
@@ -145,7 +161,9 @@
       if (titleEl) titleEl.textContent = 'Material Inventory Stock & Valuation Audit';
       if (subtitleEl) subtitleEl.textContent = `Generated on ${now} • Stock Levels, Threshold Alerts & Valuation`;
 
-      const materials = window.DataStore.getMaterials(projectFilter);
+      const materials = window.BuildTrack.filterClientRecords(
+        window.DataStore.getMaterials(projectFilter), projectFilter, 'assignedProjectId'
+      );
       headers = ['Material Code', 'Material Name', 'Category', 'Stock Qty', 'Min Level', 'Unit Rate', 'Inventory Value'];
       rows = materials.map(m => [
         m.id,
@@ -169,7 +187,9 @@
       if (titleEl) titleEl.textContent = 'Vendor & Subcontractor Disbursements Ledger';
       if (subtitleEl) subtitleEl.textContent = `Generated on ${now} • Cash Flow Audit & Payment Clearance`;
 
-      const payments = window.DataStore.getPayments(projectFilter);
+      const payments = window.BuildTrack.filterClientRecords(
+        window.DataStore.getPayments(projectFilter), projectFilter, 'projectId'
+      );
       headers = ['Payment Ref', 'Recipient / Supplier', 'Date', 'Payment Mode', 'Status', 'Disbursed Amount'];
       rows = payments.map(p => [
         p.paymentRef,
@@ -192,7 +212,9 @@
       if (titleEl) titleEl.textContent = 'Delayed Work Packages & Overdue Tasks Register';
       if (subtitleEl) subtitleEl.textContent = `Generated on ${now} • Critical Schedule Bottlenecks`;
 
-      const tasks = window.DataStore.getTasks(projectFilter);
+      const tasks = window.BuildTrack.filterClientRecords(
+        window.DataStore.getTasks(projectFilter), projectFilter, 'projectId'
+      );
       const today = new Date().toISOString().split('T')[0];
       const overdue = tasks.filter(t => t.status !== 'completed' && t.dueDate < today);
 
@@ -211,6 +233,13 @@
         { label: 'High Priority Overdue', val: overdue.filter(t => t.priority === 'high').length },
         { label: 'Status', val: overdue.length > 0 ? 'Action Required' : 'On Track' }
       ];
+    }
+
+    if (currentReportType !== 'progress') {
+      stats.unshift({
+        label: window.BuildTrack.isClientRole() ? 'Assigned Projects' : 'Projects Included',
+        val: getReportProjects(projectFilter).length
+      });
     }
 
     // Render Stats Box
@@ -290,8 +319,14 @@
 
     window.addEventListener('buildtrack:datachanged', () => {
       if (window.BuildTrack.currentView === 'reports') {
+        populateReportProjectFilter();
         generateActiveReport();
       }
+    });
+
+    window.addEventListener('buildtrack:clientchanged', () => {
+      populateReportProjectFilter();
+      generateActiveReport();
     });
 
     initReports();

@@ -1,6 +1,6 @@
-# BuildTrack — AI-Based Construction Project Management and Risk Prediction System
+# BuildTrack: Construction Project Management and Risk Prediction System
 
-BuildTrack is a modern, professional construction management SaaS frontend engineered for small-to-medium civil contractors, project engineers, and builders. It unifies project tracking, schedule tasks, workforce attendance, material inventory, expense accounting, vendor payments, daily progress site diaries, and an **AI Risk Intelligence Centre** in one centralized web platform.
+BuildTrack is a construction project management application for contractors, project engineers, and site teams. Its HTML, CSS, and JavaScript frontend supports project tracking, schedule tasks, workforce attendance, material inventory, expense accounting, vendor payments, progress diaries, and rule-based risk alerts. SQLite schema and helper functions are provided separately. Risk alerts use fixed checks over current project records; the project does not implement AI or machine learning.
 
 ---
 
@@ -24,6 +24,11 @@ Open PowerShell or Terminal in the `Buildtrackk` folder and run:
 python -m http.server 8000
 ```
 Then visit `http://localhost:8000` in your browser.
+
+### Install BuildTrack and use it offline
+PWAs require a secure context, so open the app through `http://localhost` / `http://127.0.0.1` during development or through HTTPS after deployment. Opening `index.html` directly with `file://` still shows the website, but browsers do not allow the service worker to run there.
+
+In a supported browser, use the **Install app** control when it appears, or choose the browser's **Install app** / **Add to Home Screen** command. The service worker keeps the app shell available offline after its first successful load. BuildTrack records remain in that browser's LocalStorage; offline edits do not synchronize with the separate SQLite database.
 
 ---
 
@@ -51,6 +56,8 @@ To try each role locally, sign in with a valid email and a password of at least 
 ```
 Buildtrackk/
 ├── index.html               # Main semantic HTML5 markup containing all 10 page views & modals
+├── manifest.json            # Install name, display mode, colors, and app icons
+├── service-worker.js        # Cached app shell and offline request handling
 ├── css/
 │   └── style.css            # Responsive CSS3 styles, Navy/Orange theme, Kanban, & @media print
 ├── js/
@@ -63,12 +70,15 @@ Buildtrackk/
 │   ├── materials.js         # Material inventory, stock-in/out logs & negative stock prevention
 │   ├── finance.js           # Budget vs actuals, expenses log, payments & accounting ledger
 │   ├── progress.js          # Daily Site Progress Diary (DPR), blockers, & progress sync
-│   ├── risks.js             # AI Risk Intelligence Centre (heuristic anomaly detection engine)
+│   ├── risks.js             # Rule-based risk checks and explanations
 │   ├── reports.js           # Multi-domain audit reports, summary statistics, print & CSV export
-│   └── settings.js          # Contractor firm profile, preferences, & demo data reset
+│   ├── settings.js          # Contractor firm profile, preferences, & demo data reset
+│   └── pwa.js               # Service worker registration, install prompt, and connectivity notice
 └── assets/
     ├── logo.svg             # Safety helmet & modern architectural skyline logo
-    └── avatar.svg           # Vector avatar for site engineers
+    ├── avatar.svg           # Vector avatar for site engineers
+    ├── icon-192.png         # Install and Apple touch icon
+    └── icon-512.png         # Install and maskable icon
 ```
 
 ---
@@ -120,15 +130,11 @@ Buildtrackk/
 - Contractors file daily site logs tracking: work completed today, updated completion percentage (which **automatically syncs back to the project's progress bar**), workforce turnout, materials consumed, site issues/blockers, and next day targets.
 - Presented in a clean site timeline stream.
 
-### 8. AI-Based Risk Intelligence Centre
-- **Differentiating Feature**: Uses transparent heuristic anomaly detection algorithms evaluating:
-  - *Budget Overrun Risk*: Identifies when spend rate significantly outstrips physical completion (`Cost Performance Index < 0.78`).
-  - *Schedule Delay Risk*: Flags milestone slippage based on days remaining vs work remaining and overdue tasks.
-  - *Material Depletion Threat*: Detects when critical materials drop below safety buffers.
-  - *Labour Shortages*: Warns when active workforce turnout drops below scheduled requirements.
-- Calculates overall **Portfolio Risk Health Index (0-100)**.
-- Each alert displays the *Root Cause*, *Quantitative Supporting Data*, and *Actionable AI Recommendations*.
-- **Machine Learning Ready**: Prepared for Python Flask + Pandas + Scikit-Learn microservice integration (`POST /api/v1/predict-risk`).
+### 8. Rule-Based Risk Alerts
+- Checks for unusually high expenditure compared with project progress, delayed projects or overdue tasks, materials at or below their minimum stock level, and low workforce attendance.
+- Calculates a portfolio health score from the triggered conditions.
+- Each alert displays the condition, supporting project data, and a suggested corrective action.
+- These are transparent JavaScript rules over current LocalStorage records. No AI or machine learning model or prediction service is implemented.
 
 ### 9. Reports & Site Analytics
 - Generates 6 audit reports: *Project Progress*, *Budget vs Expenses*, *Labour Wages*, *Material Inventory*, *Vendor Payments*, and *Overdue Tasks*.
@@ -145,7 +151,7 @@ Buildtrackk/
 ## 🎓 Academic / Viva Presentation Tips
 
 When presenting BuildTrack to professors or external examiners:
-1. **Highlight the Unified Workflow**: Show how recording a *Daily Progress Report* updates the *Project Progress Bar*, which updates the *Executive Dashboard*, and triggers or resolves *AI Risk Alerts*.
-2. **Explain the AI Risk Engine**: Emphasize that the frontend implements transparent, rule-based deterministic heuristics (Earned Value CPI/SPI ratios) that are structured as clean API contracts ready to connect to a Python Flask / Pandas / Random Forest machine learning backend.
+1. **Highlight the Unified Workflow**: Show how recording a *Daily Progress Report* updates the *Project Progress Bar*, which updates the *Executive Dashboard* and can change rule-based risk alerts.
+2. **Explain the Risk Checks**: Describe how fixed conditions flag expenditure variance, overdue work, low stock, and attendance concerns. The project does not use AI or machine learning.
 3. **Demonstrate Financial Integrity**: Explain how *Expenses* (accrued liabilities) and *Payments* (cash disbursements) are modeled separately to eliminate double counting.
 4. **Show LocalStorage Persistence**: Add a new task or worker, refresh the browser, and demonstrate that all changes persist in the browser storage.

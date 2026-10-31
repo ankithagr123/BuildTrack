@@ -25,7 +25,7 @@ This mapping was checked against the current `index.html` forms and the actual J
 | Project `spent`, remaining budget, utilization | `project_financial_summary` calculates `SUM(expenses.amount)` and `budget - spent`. Do not store duplicate totals. Demo `spent` seed values disagree with the limited demo expense ledger; after expense edits the frontend recalculates from expense rows. |
 | Dashboard KPI cards and charts | Calculated from project, expense, payment, task, material, worker, attendance, and progress records. Counts, totals, category slices, monthly series, overdue flags, wage estimates, stock valuation, and progress averages are not separate stored entities. |
 | Reports and CSV export | `js/reports.js` builds six report types (progress, finance, labour, materials, payments, tasks) from the same records and exports a temporary CSV in the browser. No report snapshot/export table is present. |
-| Risk alerts | `js/risks.js` computes rules-based budget, schedule, stock, and attendance risks on demand. They are not persisted. The UI's AI language is not evidence of a stored prediction/history feature. |
+| Risk alerts | `js/risks.js` computes rule-based budget, schedule, stock, and attendance alerts on demand. They are not persisted. No model prediction or alert-history table exists. |
 | Search, filters, selected project, tabs, chart series, modal state, toast/notification display | Temporary UI state; not database fields. |
 | `buildtrack_initialized_v2` | LocalStorage seed marker only; do not store as business data. |
 

@@ -151,7 +151,7 @@ The database test suite includes checks against the frontend contract, migration
 - Attendance belongs to a worker and date. Deleting the worker removes its attendance.
 - Stock transactions belong to a material; project association is optional. The reusable stock functions record movement and quantity adjustment together in one transaction, and reject a stock-out that would make quantity negative.
 - Worker and task assignment fields remain frontend-compatible free-text labels. The frontend task assignee is a team label and is not reliably a worker ID.
-- Current risk alerts are calculated on demand by `js/risks.js`; no risk table is added. The README's stated AI wording exceeds the code: the current implementation is deterministic heuristic rules, not a trained model.
+- Current risk alerts are calculated on demand by `js/risks.js`; no risk table is added. The implementation uses deterministic rules over current project records, not a trained model.
 - No credentials are persisted. The present login is a browser demo and is not safe authentication for a deployed API.
 
 ## LocalStorage migration
