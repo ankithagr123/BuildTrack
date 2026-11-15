@@ -147,3 +147,10 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# BuildTrack local files
+__pycache__/
+*.py[cod]
+database/buildtrack.sqlite3
+*-cookies.txt
+cookies.txt
