@@ -1302,5 +1302,86 @@
   };
 
   // Run initialization immediately
+// Initialize on script load
   window.DataStore.init();
+
+  // --- TEAM 3 FLASK API SYNC LAYER ---
+  const API_BASE = 'http://localhost:5000/api/v1';
+
+  async function syncFromBackend() {
+    try {
+      const [expRes, payRes, progRes] = await Promise.all([
+        fetch(`${API_BASE}/finance/expenses`),
+        fetch(`${API_BASE}/finance/payments`),
+        fetch(`${API_BASE}/progress`)
+      ]);
+
+      if (expRes.ok) localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(await expRes.json()));
+      if (payRes.ok) localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(await payRes.json()));
+      if (progRes.ok) localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(await progRes.json()));
+
+      window.dispatchEvent(new CustomEvent('buildtrack:datachanged', { detail: { key: 'api_sync' } }));
+    } catch (err) {
+      console.warn('Flask backend offline — running on local cache:', err.message);
+    }
+  }
+
+  const origSaveExpense = window.DataStore.saveExpense.bind(window.DataStore);
+  window.DataStore.saveExpense = function (expense) {
+    const saved = origSaveExpense(expense);
+    fetch(`${API_BASE}/finance/expenses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(saved)
+    }).catch(e => console.warn('Sync saveExpense failed:', e));
+    return saved;
+  };
+
+  const origDeleteExpense = window.DataStore.deleteExpense.bind(window.DataStore);
+  window.DataStore.deleteExpense = function (id) {
+    const res = origDeleteExpense(id);
+    fetch(`${API_BASE}/finance/expenses/${id}`, { method: 'DELETE' })
+      .catch(e => console.warn('Sync deleteExpense failed:', e));
+    return res;
+  };
+
+  const origSavePayment = window.DataStore.savePayment.bind(window.DataStore);
+  window.DataStore.savePayment = function (payment) {
+    const saved = origSavePayment(payment);
+    fetch(`${API_BASE}/finance/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(saved)
+    }).catch(e => console.warn('Sync savePayment failed:', e));
+    return saved;
+  };
+
+  const origDeletePayment = window.DataStore.deletePayment.bind(window.DataStore);
+  window.DataStore.deletePayment = function (id) {
+    const res = origDeletePayment(id);
+    fetch(`${API_BASE}/finance/payments/${id}`, { method: 'DELETE' })
+      .catch(e => console.warn('Sync deletePayment failed:', e));
+    return res;
+  };
+
+  const origSaveProgress = window.DataStore.saveProgressReport.bind(window.DataStore);
+  window.DataStore.saveProgressReport = function (report) {
+    const saved = origSaveProgress(report);
+    fetch(`${API_BASE}/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(saved)
+    }).catch(e => console.warn('Sync saveProgressReport failed:', e));
+    return saved;
+  };
+
+  const origDeleteProgress = window.DataStore.deleteProgressReport.bind(window.DataStore);
+  window.DataStore.deleteProgressReport = function (id) {
+    const res = origDeleteProgress(id);
+    fetch(`${API_BASE}/progress/${id}`, { method: 'DELETE' })
+      .catch(e => console.warn('Sync deleteProgressReport failed:', e));
+    return res;
+  };
+
+  document.addEventListener('DOMContentLoaded', syncFromBackend);
 })();
