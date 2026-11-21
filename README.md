@@ -143,3 +143,24 @@ When presenting BuildTrack to professors or external examiners:
 2. **Explain the AI Risk Engine**: Emphasize that the frontend implements transparent, rule-based deterministic heuristics (Earned Value CPI/SPI ratios) that are structured as clean API contracts ready to connect to a Python Flask / Pandas / Random Forest machine learning backend.
 3. **Demonstrate Financial Integrity**: Explain how *Expenses* (accrued liabilities) and *Payments* (cash disbursements) are modeled separately to eliminate double counting.
 4. **Show LocalStorage Persistence**: Add a new task or worker, refresh the browser, and demonstrate that all changes persist in the browser storage.
+# Local backend configuration
+
+The backend requires `BUILDTRACK_SECRET_KEY` before startup. Generate a unique
+random value for each deployment (for example, with Python's
+`secrets.token_urlsafe(48)`) and keep it out of source control. For local
+development in PowerShell:
+
+```powershell
+$env:BUILDTRACK_SECRET_KEY = python -c "import secrets; print(secrets.token_urlsafe(48))"
+$env:BUILDTRACK_COOKIE_SECURE = "0"
+$env:BUILDTRACK_ADMIN_SETUP_TOKEN = python -c "import secrets; print(secrets.token_urlsafe(32))"
+python -m backend.app
+```
+
+For HTTPS deployments, leave `BUILDTRACK_COOKIE_SECURE` unset (it defaults to
+secure cookies). Set `BUILDTRACK_ADMIN_SETUP_TOKEN` to a separate one-time
+secret before starting the service, then make the first administrator with
+`POST /api/auth/setup-admin`, JSON `{ "name", "email", "password" }`, and the
+`X-Admin-Setup-Token` header. Remove the setup token after setup. Public account
+registration cannot create administrators; an authenticated administrator
+creates other roles through `POST /api/auth/register`.

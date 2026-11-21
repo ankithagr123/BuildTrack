@@ -207,7 +207,7 @@
 
     // Add / Edit Form submission
     if (projectForm) {
-      projectForm.addEventListener('submit', function (e) {
+      projectForm.addEventListener('submit', async function (e) {
         e.preventDefault();
 
         const id = document.getElementById('projectFormId').value;
@@ -247,10 +247,14 @@
           spent: id ? (window.DataStore.getProject(id)?.spent || 0) : 0
         };
 
-        window.DataStore.saveProject(projectData);
-        window.BuildTrack.closeModal('projectModal');
-        window.BuildTrack.showToast(`Project "${name}" saved successfully!`, 'success');
-        renderProjectsList();
+        try {
+          await window.DataStore.saveProject(projectData);
+          window.BuildTrack.closeModal('projectModal');
+          window.BuildTrack.showToast(`Project "${name}" saved successfully!`, 'success');
+          renderProjectsList();
+        } catch (error) {
+          window.BuildTrack.showToast(window.DataStore.getApiError(error), 'error');
+        }
       });
     }
 
@@ -461,10 +465,14 @@
       message: 'This will remove the project and its references from the local dashboard. This action cannot be reversed.',
       confirmText: 'Delete Project',
       confirmClass: 'btn-danger',
-      onConfirm: () => {
-        window.DataStore.deleteProject(projectId);
-        window.BuildTrack.showToast(`Project "${p.name}" deleted.`, 'info');
-        renderProjectsList();
+      onConfirm: async () => {
+        try {
+          await window.DataStore.deleteProject(projectId);
+          window.BuildTrack.showToast(`Project "${p.name}" deleted.`, 'info');
+          renderProjectsList();
+        } catch (error) {
+          window.BuildTrack.showToast(window.DataStore.getApiError(error), 'error');
+        }
       }
     });
   }

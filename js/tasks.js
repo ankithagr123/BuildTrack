@@ -211,7 +211,7 @@
     }
 
     if (taskForm) {
-      taskForm.addEventListener('submit', function (e) {
+      taskForm.addEventListener('submit', async function (e) {
         e.preventDefault();
 
         const id = document.getElementById('taskFormId').value;
@@ -241,10 +241,14 @@
           description
         };
 
-        window.DataStore.saveTask(taskData);
-        window.BuildTrack.closeModal('taskModal');
-        window.BuildTrack.showToast(`Task "${title}" saved successfully!`, 'success');
-        renderTasksView();
+        try {
+          await window.DataStore.saveTask(taskData);
+          window.BuildTrack.closeModal('taskModal');
+          window.BuildTrack.showToast(`Task "${title}" saved successfully!`, 'success');
+          renderTasksView();
+        } catch (error) {
+          window.BuildTrack.showToast(window.DataStore.getApiError(error), 'error');
+        }
       });
     }
   }
@@ -255,18 +259,20 @@
 
     const cycle = { 'todo': 'in-progress', 'in-progress': 'completed', 'completed': 'todo' };
     task.status = cycle[task.status] || 'todo';
-    window.DataStore.saveTask(task);
-    window.BuildTrack.showToast(`Task updated to "${task.status.toUpperCase()}"`, 'info', 1500);
-    renderTasksView();
+    window.DataStore.saveTask(task).then(() => {
+      window.BuildTrack.showToast(`Task updated to "${task.status.toUpperCase()}"`, 'info', 1500);
+      renderTasksView();
+    }).catch(error => window.BuildTrack.showToast(window.DataStore.getApiError(error), 'error'));
   }
 
   function updateStatusDirect(taskId, newStatus) {
     const task = window.DataStore.getTask(taskId);
     if (!task) return;
     task.status = newStatus;
-    window.DataStore.saveTask(task);
-    window.BuildTrack.showToast(`Task status updated to ${newStatus}`, 'info', 1500);
-    renderTasksView();
+    window.DataStore.saveTask(task).then(() => {
+      window.BuildTrack.showToast(`Task status updated to ${newStatus}`, 'info', 1500);
+      renderTasksView();
+    }).catch(error => window.BuildTrack.showToast(window.DataStore.getApiError(error), 'error'));
   }
 
   function openAddModal() {
@@ -323,10 +329,14 @@
       message: 'This task will be removed permanently.',
       confirmText: 'Delete Task',
       confirmClass: 'btn-danger',
-      onConfirm: () => {
-        window.DataStore.deleteTask(taskId);
-        window.BuildTrack.showToast(`Task "${t.title}" deleted.`, 'info');
-        renderTasksView();
+      onConfirm: async () => {
+        try {
+          await window.DataStore.deleteTask(taskId);
+          window.BuildTrack.showToast(`Task "${t.title}" deleted.`, 'info');
+          renderTasksView();
+        } catch (error) {
+          window.BuildTrack.showToast(window.DataStore.getApiError(error), 'error');
+        }
       }
     });
   }
