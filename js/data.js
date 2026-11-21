@@ -18,6 +18,52 @@
     CURRENT_USER: 'buildtrack_current_user',
     INITIALIZED: 'buildtrack_initialized_v2'
   };
+  const API_HOST = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? window.location.hostname
+    : '127.0.0.1';
+  const API_BASE = window.BUILDTRACK_API_URL || `http://${API_HOST}:5000/api`;
+  let projectsCache = [];
+  let tasksCache = [];
+  let currentUser = null;
+
+  async function apiRequest(path, options = {}) {
+    const response = await fetch(`${API_BASE}${path}`, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      ...options
+    });
+    const body = response.status === 204 ? null : await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body?.error || `Request failed (${response.status})`);
+    return body;
+  }
+
+  const projectFromApi = p => ({ ...p, startDate: p.startDate ?? p.start_date, expectedCompletionDate: p.expectedCompletionDate ?? p.expected_completion_date });
+  const taskFromApi = t => ({ ...t, projectId: t.projectId ?? t.project_id, assignedTo: t.assignedTo ?? t.assigned_to, startDate: t.startDate ?? t.start_date, dueDate: t.dueDate ?? t.due_date });
+
+  async function refreshProjectTaskCache() {
+    const readAllowedData = path => apiRequest(path).catch(error => {
+      if (/403|permission/i.test(error.message)) return [];
+      throw error;
+    });
+    const [projects, tasks] = await Promise.all([readAllowedData('/projects'), readAllowedData('/tasks')]);
+    projectsCache = projects.map(projectFromApi);
+    tasksCache = tasks.map(taskFromApi);
+    window.dispatchEvent(new CustomEvent('buildtrack:datachanged', { detail: { key: 'projects_tasks' } }));
+    return { projects: projectsCache, tasks: tasksCache };
+  }
+
+  async function restoreApiSession() {
+    try {
+      const response = await apiRequest('/auth/me');
+      currentUser = response.user;
+      await refreshProjectTaskCache();
+    } catch (_) {
+      currentUser = null;
+      projectsCache = [];
+      tasksCache = [];
+    }
+    return currentUser;
+  }
 
   // Seed Data: 5 Realistic Projects in India
   const initialProjects = [
@@ -932,15 +978,12 @@
   // Initialize Default Data if Not Set
   function initializeData() {
     if (!localStorage.getItem(STORAGE_KEYS.INITIALIZED)) {
-      localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(initialProjects));
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(initialTasks));
       localStorage.setItem(STORAGE_KEYS.LABOUR, JSON.stringify(initialLabour));
       localStorage.setItem(STORAGE_KEYS.MATERIALS, JSON.stringify(initialMaterials));
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(initialExpenses));
       localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(initialPayments));
       localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(initialProgress));
       localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(initialSettings));
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(defaultUser));
       localStorage.setItem('buildtrack_attendance', JSON.stringify(initialAttendance));
       localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
     }
@@ -948,19 +991,23 @@
 
   // Master DataStore API
   window.DataStore = {
-    init: initializeData,
+    init: function () {
+      initializeData();
+      this.ready = restoreApiSession();
+      return this.ready;
+    },
+    ready: Promise.resolve(null),
+    refreshProjectTaskCache,
+    getApiError: error => error?.message || 'Could not connect to BuildTrack API',
 
     // Reset to pristine sample data
     resetToDefault: function () {
-      localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(initialProjects));
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(initialTasks));
       localStorage.setItem(STORAGE_KEYS.LABOUR, JSON.stringify(initialLabour));
       localStorage.setItem(STORAGE_KEYS.MATERIALS, JSON.stringify(initialMaterials));
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(initialExpenses));
       localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(initialPayments));
       localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(initialProgress));
       localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(initialSettings));
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(defaultUser));
       localStorage.setItem('buildtrack_attendance', JSON.stringify(initialAttendance));
       localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
       window.dispatchEvent(new CustomEvent('buildtrack:datachanged', { detail: { key: 'all_reset' } }));
@@ -969,57 +1016,55 @@
 
     // --- Projects ---
     getProjects: function () {
-      return loadFromStorage(STORAGE_KEYS.PROJECTS, initialProjects);
+      return projectsCache.slice();
     },
     getProject: function (id) {
-      return this.getProjects().find(p => p.id === id) || null;
+      const project = this.getProjects().find(p => p.id === id);
+      return project ? { ...project } : null;
     },
-    saveProject: function (project) {
-      const list = this.getProjects();
-      const index = list.findIndex(p => p.id === project.id);
-      if (index >= 0) {
-        list[index] = { ...list[index], ...project };
-      } else {
-        if (!project.id) project.id = 'PRJ-' + String(list.length + 1).padStart(2, '0');
-        list.push(project);
-      }
-      saveToStorage(STORAGE_KEYS.PROJECTS, list);
-      return project;
+    saveProject: async function (project) {
+      const editing = Boolean(project.id);
+      const saved = await apiRequest(editing ? `/projects/${encodeURIComponent(project.id)}` : '/projects', {
+        method: editing ? 'PUT' : 'POST', body: JSON.stringify(project)
+      });
+      const normalized = projectFromApi(saved);
+      projectsCache = editing ? projectsCache.map(p => p.id === normalized.id ? normalized : p) : [...projectsCache, normalized];
+      window.dispatchEvent(new CustomEvent('buildtrack:datachanged', { detail: { key: 'projects' } }));
+      return normalized;
     },
-    deleteProject: function (id) {
-      let list = this.getProjects();
-      list = list.filter(p => p.id !== id);
-      saveToStorage(STORAGE_KEYS.PROJECTS, list);
+    deleteProject: async function (id) {
+      await apiRequest(`/projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      projectsCache = projectsCache.filter(p => p.id !== id);
+      window.dispatchEvent(new CustomEvent('buildtrack:datachanged', { detail: { key: 'projects' } }));
       return true;
     },
 
     // --- Tasks ---
     getTasks: function (projectId) {
-      let tasks = loadFromStorage(STORAGE_KEYS.TASKS, initialTasks);
+      let tasks = tasksCache.slice();
       if (projectId && projectId !== 'all') {
         tasks = tasks.filter(t => t.projectId === projectId);
       }
       return tasks;
     },
     getTask: function (id) {
-      return this.getTasks().find(t => t.id === id) || null;
+      const task = this.getTasks().find(t => t.id === id);
+      return task ? { ...task } : null;
     },
-    saveTask: function (task) {
-      const list = this.getTasks();
-      const index = list.findIndex(t => t.id === task.id);
-      if (index >= 0) {
-        list[index] = { ...list[index], ...task };
-      } else {
-        if (!task.id) task.id = 'TSK-' + Math.floor(100 + Math.random() * 900);
-        list.push(task);
-      }
-      saveToStorage(STORAGE_KEYS.TASKS, list);
-      return task;
+    saveTask: async function (task) {
+      const editing = Boolean(task.id);
+      const saved = await apiRequest(editing ? `/tasks/${encodeURIComponent(task.id)}` : '/tasks', {
+        method: editing ? 'PUT' : 'POST', body: JSON.stringify(task)
+      });
+      const normalized = taskFromApi(saved);
+      tasksCache = editing ? tasksCache.map(t => t.id === normalized.id ? normalized : t) : [...tasksCache, normalized];
+      window.dispatchEvent(new CustomEvent('buildtrack:datachanged', { detail: { key: 'tasks' } }));
+      return normalized;
     },
-    deleteTask: function (id) {
-      let list = this.getTasks();
-      list = list.filter(t => t.id !== id);
-      saveToStorage(STORAGE_KEYS.TASKS, list);
+    deleteTask: async function (id) {
+      await apiRequest(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      tasksCache = tasksCache.filter(t => t.id !== id);
+      window.dispatchEvent(new CustomEvent('buildtrack:datachanged', { detail: { key: 'tasks' } }));
       return true;
     },
 
@@ -1254,50 +1299,33 @@
 
     // --- Authentication & Session Prototype ---
     getUser: function () {
-      return loadFromStorage(STORAGE_KEYS.CURRENT_USER, defaultUser);
+      return currentUser;
     },
-    saveUser: function (user) {
-      saveToStorage(STORAGE_KEYS.CURRENT_USER, user);
-      return user;
+    saveUser: async function (user) {
+      const result = await apiRequest('/auth/register', { method: 'POST', body: JSON.stringify(user) });
+      const loggedIn = await apiRequest('/auth/login', { method: 'POST', body: JSON.stringify({ email: user.email, password: user.password }) });
+      currentUser = loggedIn.user || result.user;
+      await refreshProjectTaskCache();
+      window.dispatchEvent(new CustomEvent('buildtrack:authchanged', { detail: { loggedIn: true } }));
+      return currentUser;
     },
-    login: function (email, password) {
-      // Prototype demo credentials validation
-      const validCreds = [
-        { email: 'admin@buildtrack.com', pass: 'admin123', name: 'Er. Rajesh Kumar', role: 'Principal Contractor' },
-        { email: 'engineer@buildtrack.com', pass: 'build2026', name: 'Er. Vikram Shinde', role: 'Senior Civil Engineer' }
-      ];
-
-      const match = validCreds.find(c => c.email.toLowerCase() === email.trim().toLowerCase());
-      if (match && match.pass === password) {
-        const user = {
-          name: match.name,
-          role: match.role,
-          email: match.email,
-          avatar: 'assets/avatar.png'
-        };
-        this.saveUser(user);
-        return { success: true, user };
-      }
-      // Allow any non-empty input for demonstration flexibility if requested, but check basic presence
-      if (email.includes('@') && password.length >= 6) {
-        const user = {
-          name: email.split('@')[0].toUpperCase(),
-          role: 'Site In-charge',
-          email: email.trim(),
-          avatar: 'assets/avatar.png'
-        };
-        this.saveUser(user);
-        return { success: true, user };
-      }
-      return { success: false, message: 'Invalid credentials. Use demo credentials or email with min 6-char password.' };
+    login: async function (email, password) {
+      const result = await apiRequest('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+      currentUser = result.user;
+      await refreshProjectTaskCache();
+      window.dispatchEvent(new CustomEvent('buildtrack:authchanged', { detail: { loggedIn: true } }));
+      return { success: true, user: currentUser };
     },
-    logout: function () {
-      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    logout: async function () {
+      await apiRequest('/auth/logout', { method: 'POST' });
+      currentUser = null;
+      projectsCache = [];
+      tasksCache = [];
       window.dispatchEvent(new CustomEvent('buildtrack:authchanged', { detail: { loggedIn: false } }));
       return true;
     },
     isLoggedIn: function () {
-      return !!localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      return !!currentUser;
     }
   };
 

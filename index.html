@@ -26,7 +26,7 @@
   <div class="toast-notifications-container" id="toastContainer"></div>
 
   <!-- ========================================================================
-       AUTHENTICATION OVERLAY (PROTOTYPE DEMO LOGIN & REGISTRATION)
+       AUTHENTICATION OVERLAY (FLASK SESSION LOGIN & REGISTRATION)
        ======================================================================== -->
   <div class="auth-overlay-backdrop hidden" id="authOverlay">
     <div class="auth-card-panel">
@@ -43,32 +43,25 @@
           <button type="button" class="auth-tab-btn" id="tabAuthRegister">Create Account</button>
         </div>
 
-        <!-- Demo Credentials Autofill Banner -->
+        <!-- Initial account setup -->
         <div class="demo-credentials-banner">
           <div style="font-weight: 700; display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-            <i class="fa-solid fa-key"></i> Quick Demo Access (Click to Autofill)
+            <i class="fa-solid fa-key"></i> Sign in with your team account
           </div>
-          <div class="demo-cred-row">
-            <span><strong>Admin / Contractor:</strong> admin@buildtrack.com / admin123</span>
-            <span class="demo-quick-fill-btn" id="fillAdminCreds">Autofill</span>
-          </div>
-          <div class="demo-cred-row">
-            <span><strong>Site Engineer:</strong> engineer@buildtrack.com / build2026</span>
-            <span class="demo-quick-fill-btn" id="fillEngineerCreds">Autofill</span>
-          </div>
+          <div class="demo-cred-row"><span>The first account in a new database becomes the administrator. Later accounts must be created by an administrator.</span></div>
         </div>
 
         <!-- Sign In Form -->
         <form id="loginForm">
           <div class="form-group-field">
             <label class="form-label-title" for="loginEmail">Email Address <span class="required">*</span></label>
-            <input type="email" id="loginEmail" class="form-input-text" placeholder="contractor@buildtrack.com" required value="admin@buildtrack.com">
+            <input type="email" id="loginEmail" class="form-input-text" placeholder="contractor@buildtrack.com" required>
           </div>
 
           <div class="form-group-field">
             <label class="form-label-title" for="loginPassword">Password <span class="required">*</span></label>
             <div class="password-input-wrapper">
-              <input type="password" id="loginPassword" class="form-input-text" placeholder="••••••••" required value="admin123">
+              <input type="password" id="loginPassword" class="form-input-text" placeholder="••••••••" required>
               <i class="fa-solid fa-eye password-toggle-eye"></i>
             </div>
           </div>
@@ -87,12 +80,17 @@
 
           <div class="form-group-field">
             <label class="form-label-title" for="regRole">Role in Firm <span class="required">*</span></label>
-            <select id="regRole" class="form-select-custom">
-              <option value="Principal Contractor">Principal Contractor</option>
-              <option value="Senior Project Manager">Senior Project Manager</option>
-              <option value="Civil Site Engineer">Civil Site Engineer</option>
-              <option value="Quantity Surveyor">Quantity Surveyor</option>
+            <select id="regRole" class="form-select-custom" required>
+              <option value="Contractor / Admin">Contractor / Admin</option>
+              <option value="Site Engineer / Supervisor">Site Engineer / Supervisor</option>
+              <option value="Storekeeper">Storekeeper</option>
+              <option value="Client / Project Owner">Client / Project Owner</option>
             </select>
+          </div>
+
+          <div class="form-group-field" id="regClientNameGroup" style="display: none;">
+            <label class="form-label-title" for="regClientName">Assigned Client Name <span class="required">*</span></label>
+            <input type="text" id="regClientName" class="form-input-text" placeholder="Client name as shown on a project">
           </div>
 
           <div class="form-group-field">
@@ -101,9 +99,9 @@
           </div>
 
           <div class="form-group-field">
-            <label class="form-label-title" for="regPassword">Set Password (min 6 chars) <span class="required">*</span></label>
+            <label class="form-label-title" for="regPassword">Set Password (min 8 chars) <span class="required">*</span></label>
             <div class="password-input-wrapper">
-              <input type="password" id="regPassword" class="form-input-text" placeholder="••••••••" required minlength="6">
+              <input type="password" id="regPassword" class="form-input-text" placeholder="••••••••" required minlength="8">
               <i class="fa-solid fa-eye password-toggle-eye"></i>
             </div>
           </div>
@@ -114,7 +112,7 @@
         </form>
 
         <p style="font-size: 0.7rem; color: var(--text-muted); text-align: center; margin-top: 1.25rem;">
-          <i class="fa-solid fa-info-circle"></i> College Mini-Project Demonstration Environment. Credentials stored in browser LocalStorage.
+          <i class="fa-solid fa-info-circle"></i> College Mini-Project Demonstration Environment. Authentication uses the BuildTrack API session.
         </p>
       </div>
     </div>
@@ -226,6 +224,7 @@
           <div class="user-info-text">
             <div class="user-display-name">Er. Rajesh Kumar</div>
             <div class="user-role-badge">Principal Contractor</div>
+            <button type="button" id="adminCreateAccount" class="demo-quick-fill-btn" style="display:none; padding:0; border:0; background:none;">Create account</button>
           </div>
           <button class="user-logout-quick-btn" title="Sign Out">
             <i class="fa-solid fa-right-from-bracket"></i>

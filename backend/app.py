@@ -22,6 +22,20 @@ app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=8)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = False  # Local development only
+app.config["DATABASE_PATH"] = str(db.DATABASE_PATH)
+
+
+@app.after_request
+def add_local_frontend_cors(response):
+    """Allow the local static frontend to call Flask with its session cookie."""
+    origin = request.headers.get("Origin", "")
+    if origin == "null" or origin.startswith(("http://localhost:", "http://127.0.0.1:")):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Vary"] = "Origin"
+    return response
 
 
 ROLES = [
@@ -64,11 +78,12 @@ TASK_FIELDS = {
 # --------------------------------------------------
 
 def get_connection():
-    return db.connect()
+    return db.connect(app.config["DATABASE_PATH"])
 
 
-def initialize_auth_table():
-    connection = get_connection()
+def initialize_auth_table(path=None):
+    """Explicitly create the additive authentication table when requested."""
+    connection = db.connect(path or app.config["DATABASE_PATH"])
 
     try:
         connection.execute("""
@@ -267,7 +282,7 @@ def register():
             "role": role,
             "email": email,
             "avatar": "assets/avatar.svg"
-        })
+        }, app.config["DATABASE_PATH"])
     except Exception:
         # Do not leave an account without its profile.
         connection = get_connection()
@@ -364,7 +379,7 @@ def logout():
 @app.route("/api/projects", methods=["GET"])
 @roles_required(PROJECT_READ_ROLES)
 def get_projects():
-    projects = db.list_projects()
+    projects = db.list_projects(app.config["DATABASE_PATH"])
 
     if g.current_user["role"] == "Client / Project Owner":
         projects = [
@@ -372,13 +387,13 @@ def get_projects():
             if client_can_access(project)
         ]
 
-    return jsonify(projects)
+    return jsonify([project_to_frontend(project) for project in projects])
 
 
 @app.route("/api/projects/<project_id>", methods=["GET"])
 @roles_required(PROJECT_READ_ROLES)
 def get_project_by_id(project_id):
-    project = db.get_project(project_id)
+    project = db.get_project(project_id, app.config["DATABASE_PATH"])
 
     if not project:
         return error_response("Project not found", 404)
@@ -386,16 +401,17 @@ def get_project_by_id(project_id):
     if not client_can_access(project):
         return error_response("Permission denied", 403)
 
-    return jsonify(project)
+    return jsonify(project_to_frontend(project))
 
 
 @app.route("/api/projects", methods=["POST"])
 @roles_required(["Contractor / Admin"])
 def create_project():
-    data = request.get_json(silent=True) or {}
+    data = project_to_database(request.get_json(silent=True) or {})
 
-    if not data.get("name") or not data.get("client"):
-        return error_response("Project name and client are required")
+    required = ("name", "client", "location", "manager", "start_date", "expected_completion_date", "budget")
+    if any(data.get(field) in (None, "") for field in required):
+        return error_response("Complete all required project fields")
 
     project = {
         "id": "PRJ-" + uuid.uuid4().hex[:8].upper(),
@@ -410,8 +426,9 @@ def create_project():
     project.setdefault("status", "planning")
 
     try:
-        saved = db.save_record("projects", project)
-        return jsonify(saved), 201
+        saved = db.save_record("projects", project, app.config["DATABASE_PATH"])
+        saved = db.get_project(saved["id"], app.config["DATABASE_PATH"])
+        return jsonify(project_to_frontend(saved)), 201
     except (ValueError, sqlite3.Error) as error:
         return error_response(error)
 
@@ -419,8 +436,8 @@ def create_project():
 @app.route("/api/projects/<project_id>", methods=["PUT"])
 @roles_required(["Contractor / Admin"])
 def update_project(project_id):
-    data = request.get_json(silent=True) or {}
-    existing = db.get_project(project_id)
+    data = project_to_database(request.get_json(silent=True) or {})
+    existing = db.get_project(project_id, app.config["DATABASE_PATH"])
 
     if not existing:
         return error_response("Project not found", 404)
@@ -438,8 +455,9 @@ def update_project(project_id):
         saved = db.save_record("projects", {
             "id": project_id,
             **updates
-        })
-        return jsonify(saved)
+        }, app.config["DATABASE_PATH"])
+        saved = db.get_project(saved["id"], app.config["DATABASE_PATH"])
+        return jsonify(project_to_frontend(saved))
     except (ValueError, sqlite3.Error) as error:
         return error_response(error)
 
@@ -447,11 +465,11 @@ def update_project(project_id):
 @app.route("/api/projects/<project_id>", methods=["DELETE"])
 @roles_required(["Contractor / Admin"])
 def remove_project(project_id):
-    if not db.get_project(project_id):
+    if not db.get_project(project_id, app.config["DATABASE_PATH"]):
         return error_response("Project not found", 404)
 
     try:
-        db.delete_project(project_id)
+        db.delete_project(project_id, app.config["DATABASE_PATH"])
         return jsonify({"message": "Project deleted successfully"})
     except ProjectDeletionError as error:
         return error_response(error, 409)
@@ -466,32 +484,32 @@ def remove_project(project_id):
 @app.route("/api/tasks", methods=["GET"])
 @roles_required(TASK_READ_ROLES)
 def get_tasks():
-    project_id = request.args.get("project_id")
-    tasks = db.list_records("tasks", project_id=project_id)
+    project_id = request.args.get("projectId") or request.args.get("project_id")
+    tasks = db.list_records("tasks", project_id=project_id, path=app.config["DATABASE_PATH"])
 
-    return jsonify(tasks)
+    return jsonify([task_to_frontend(task) for task in tasks])
 
 
 @app.route("/api/tasks/<task_id>", methods=["GET"])
 @roles_required(TASK_READ_ROLES)
 def get_task_by_id(task_id):
-    task = db.get_record("tasks", task_id)
+    task = db.get_record("tasks", task_id, app.config["DATABASE_PATH"])
 
     if not task:
         return error_response("Task not found", 404)
 
-    return jsonify(task)
+    return jsonify(task_to_frontend(task))
 
 
 @app.route("/api/tasks", methods=["POST"])
 @roles_required(TASK_WRITE_ROLES)
 def create_task():
-    data = request.get_json(silent=True) or {}
+    data = task_to_database(request.get_json(silent=True) or {})
 
     if not data.get("title") or not data.get("project_id"):
         return error_response("Task title and project ID are required")
 
-    if not db.get_project(str(data["project_id"])):
+    if not db.get_project(str(data["project_id"]), app.config["DATABASE_PATH"]):
         return error_response("The selected project does not exist")
 
     task = {
@@ -508,8 +526,8 @@ def create_task():
     task.setdefault("status", "todo")
 
     try:
-        saved = db.save_record("tasks", task)
-        return jsonify(saved), 201
+        saved = db.save_record("tasks", task, app.config["DATABASE_PATH"])
+        return jsonify(task_to_frontend(saved)), 201
     except (ValueError, sqlite3.Error) as error:
         return error_response(error)
 
@@ -517,8 +535,8 @@ def create_task():
 @app.route("/api/tasks/<task_id>", methods=["PUT"])
 @roles_required(TASK_WRITE_ROLES)
 def update_task(task_id):
-    data = request.get_json(silent=True) or {}
-    existing = db.get_record("tasks", task_id)
+    data = task_to_database(request.get_json(silent=True) or {})
+    existing = db.get_record("tasks", task_id, app.config["DATABASE_PATH"])
 
     if not existing:
         return error_response("Task not found", 404)
@@ -534,15 +552,15 @@ def update_task(task_id):
 
     project_id = updates.get("project_id", existing["project_id"])
 
-    if not db.get_project(str(project_id)):
+    if not db.get_project(str(project_id), app.config["DATABASE_PATH"]):
         return error_response("The selected project does not exist")
 
     try:
         saved = db.save_record("tasks", {
             "id": task_id,
             **updates
-        })
-        return jsonify(saved)
+        }, app.config["DATABASE_PATH"])
+        return jsonify(task_to_frontend(saved))
     except (ValueError, sqlite3.Error) as error:
         return error_response(error)
 
@@ -550,21 +568,67 @@ def update_task(task_id):
 @app.route("/api/tasks/<task_id>", methods=["DELETE"])
 @roles_required(TASK_WRITE_ROLES)
 def remove_task(task_id):
-    if not db.get_record("tasks", task_id):
+    if not db.get_record("tasks", task_id, app.config["DATABASE_PATH"]):
         return error_response("Task not found", 404)
 
     try:
-        db.delete_record("tasks", task_id)
+        db.delete_record("tasks", task_id, app.config["DATABASE_PATH"])
         return jsonify({"message": "Task deleted successfully"})
     except (ValueError, sqlite3.Error) as error:
         return error_response(error)
 
 
 # --------------------------------------------------
+# FIELD NAME CONVERSION
+# --------------------------------------------------
+
+def project_to_database(data):
+    converted = dict(data)
+    for frontend, database in (("startDate", "start_date"), ("expectedCompletionDate", "expected_completion_date")):
+        if frontend in converted:
+            converted[database] = converted.pop(frontend)
+    converted.pop("spent", None)
+    return {key: value for key, value in converted.items() if key in PROJECT_FIELDS or key == "id"}
+
+
+def project_to_frontend(project):
+    converted = dict(project)
+    for database, frontend in (("start_date", "startDate"), ("expected_completion_date", "expectedCompletionDate")):
+        if database in converted:
+            converted[frontend] = converted.pop(database)
+    return converted
+
+
+def task_to_database(data):
+    converted = dict(data)
+    for frontend, database in (("projectId", "project_id"), ("assignedTo", "assigned_to"), ("startDate", "start_date"), ("dueDate", "due_date")):
+        if frontend in converted:
+            converted[database] = converted.pop(frontend)
+    if converted.get("start_date") == "":
+        converted["start_date"] = None
+    return {key: value for key, value in converted.items() if key in TASK_FIELDS or key == "id"}
+
+
+def task_to_frontend(task):
+    converted = dict(task)
+    for database, frontend in (("project_id", "projectId"), ("assigned_to", "assignedTo"), ("start_date", "startDate"), ("due_date", "dueDate")):
+        if database in converted:
+            converted[frontend] = converted.pop(database)
+    return converted
+
+
+@app.route("/api/<path:unused>", methods=["OPTIONS"])
+def api_preflight(unused):
+    return "", 204
+
+
+# --------------------------------------------------
 # START SERVER
 # --------------------------------------------------
 
-initialize_auth_table()
-
 if __name__ == "__main__":
+    if "--init-auth" in os.sys.argv:
+        initialize_auth_table()
+        print("Authentication table is ready in the shared database.")
+        raise SystemExit(0)
     app.run(host="127.0.0.1", port=5000, debug=True)

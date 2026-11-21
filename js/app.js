@@ -260,7 +260,8 @@
   };
 
   // Initialization & Event Bindings
-  document.addEventListener('DOMContentLoaded', function () {
+  document.addEventListener('DOMContentLoaded', async function () {
+    await window.DataStore.ready;
     // 1. Check Auth
     const currentUser = window.DataStore.getUser();
     const authOverlay = document.getElementById('authOverlay');
@@ -378,10 +379,14 @@
     if (!user) return;
     const nameEls = document.querySelectorAll('.user-display-name, .topbar-user-name');
     const roleEls = document.querySelectorAll('.user-role-badge');
+    const adminCreateAccount = document.getElementById('adminCreateAccount');
     const avatarEls = document.querySelectorAll('.user-avatar-circle, .topbar-avatar');
 
     nameEls.forEach(el => el.textContent = user.name);
     roleEls.forEach(el => el.textContent = user.role);
+    if (adminCreateAccount) {
+      adminCreateAccount.style.display = user.role === 'Contractor / Admin' ? 'inline' : 'none';
+    }
     
     // Initials
     const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'BT';
@@ -394,7 +399,27 @@
     const registerForm = document.getElementById('registerForm');
     const tabLogin = document.getElementById('tabAuthLogin');
     const tabRegister = document.getElementById('tabAuthRegister');
+    const roleSelect = document.getElementById('regRole');
+    const clientNameGroup = document.getElementById('regClientNameGroup');
+    const clientNameInput = document.getElementById('regClientName');
+    if (roleSelect && clientNameGroup && clientNameInput) {
+      const syncClientName = () => {
+        const isClient = roleSelect.value === 'Client / Project Owner';
+        clientNameGroup.style.display = isClient ? 'block' : 'none';
+        clientNameInput.required = isClient;
+      };
+      roleSelect.addEventListener('change', syncClientName);
+      syncClientName();
+    }
     const authOverlay = document.getElementById('authOverlay');
+    const adminCreateAccount = document.getElementById('adminCreateAccount');
+    if (adminCreateAccount) {
+      adminCreateAccount.addEventListener('click', () => {
+        if (tabRegister) tabRegister.click();
+        if (registerForm) registerForm.reset();
+        authOverlay.classList.remove('hidden');
+      });
+    }
 
     // Switch between Login and Register tabs
     if (tabLogin && tabRegister) {
@@ -431,43 +456,48 @@
 
     // Login Form Submit
     if (loginForm) {
-      loginForm.addEventListener('submit', function (e) {
+      loginForm.addEventListener('submit', async function (e) {
         e.preventDefault();
         const email = document.getElementById('loginEmail').value;
         const pass = document.getElementById('loginPassword').value;
 
-        const res = window.DataStore.login(email, pass);
-        if (res.success) {
+        try {
+          const res = await window.DataStore.login(email, pass);
           authOverlay.classList.add('hidden');
           updateUserProfileUI(res.user);
           window.BuildTrack.showToast(`Welcome back, ${res.user.name}!`, 'success');
           window.BuildTrack.navigateTo('dashboard');
-        } else {
-          window.BuildTrack.showToast(res.message, 'error');
+        } catch (error) {
+          window.BuildTrack.showToast(window.DataStore.getApiError(error), 'error');
         }
       });
     }
 
     // Register Form Submit
     if (registerForm) {
-      registerForm.addEventListener('submit', function (e) {
+      registerForm.addEventListener('submit', async function (e) {
         e.preventDefault();
         const name = document.getElementById('regName').value;
         const email = document.getElementById('regEmail').value;
         const role = document.getElementById('regRole').value;
         const pass = document.getElementById('regPassword').value;
+        const clientName = document.getElementById('regClientName')?.value.trim() || '';
 
-        if (!name || !email || pass.length < 6) {
-          window.BuildTrack.showToast('Please provide valid details (Password min 6 characters).', 'warning');
+        if (!name || !email || pass.length < 8) {
+          window.BuildTrack.showToast('Please provide valid details (password must be at least 8 characters).', 'warning');
           return;
         }
 
-        const user = { name, email, role, avatar: 'assets/avatar.png' };
-        window.DataStore.saveUser(user);
-        authOverlay.classList.add('hidden');
-        updateUserProfileUI(user);
-        window.BuildTrack.showToast(`Account created successfully! Welcome to BuildTrack.`, 'success');
-        window.BuildTrack.navigateTo('dashboard');
+        const user = { name, email, role, password: pass, client_name: clientName, avatar: 'assets/avatar.svg' };
+        try {
+          const created = await window.DataStore.saveUser(user);
+          authOverlay.classList.add('hidden');
+          updateUserProfileUI(created);
+          window.BuildTrack.showToast(`Account created successfully! Welcome to BuildTrack.`, 'success');
+          window.BuildTrack.navigateTo('dashboard');
+        } catch (error) {
+          window.BuildTrack.showToast(window.DataStore.getApiError(error), 'error');
+        }
       });
     }
 
@@ -479,10 +509,14 @@
           message: 'Are you sure you want to log out of the construction management portal?',
           confirmText: 'Log Out',
           confirmClass: 'btn-outline',
-          onConfirm: () => {
-            window.DataStore.logout();
-            authOverlay.classList.remove('hidden');
-            window.BuildTrack.showToast('You have been logged out safely.', 'info');
+          onConfirm: async () => {
+            try {
+              await window.DataStore.logout();
+              authOverlay.classList.remove('hidden');
+              window.BuildTrack.showToast('You have been logged out safely.', 'info');
+            } catch (error) {
+              window.BuildTrack.showToast(window.DataStore.getApiError(error), 'error');
+            }
           }
         });
       });
