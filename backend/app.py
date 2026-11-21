@@ -14,14 +14,11 @@ from database.db import ProjectDeletionError
 
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = os.environ.get(
-    "BUILDTRACK_SECRET_KEY",
-    "development-key-change-before-deployment"
-)
+app.config["SECRET_KEY"] = os.environ.get("BUILDTRACK_SECRET_KEY")
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=8)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = False  # Local development only
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("BUILDTRACK_COOKIE_SECURE", "1").lower() not in ("0", "false", "no")
 app.config["DATABASE_PATH"] = str(db.DATABASE_PATH)
 
 
@@ -53,7 +50,8 @@ PROJECT_READ_ROLES = [
 
 TASK_READ_ROLES = [
     "Contractor / Admin",
-    "Site Engineer / Supervisor"
+    "Site Engineer / Supervisor",
+    "Client / Project Owner"
 ]
 
 TASK_WRITE_ROLES = [
@@ -101,6 +99,20 @@ def initialize_auth_table(path=None):
                     'Client / Project Owner'
                 ))
             )
+        """)
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS auth_client_projects (
+                account_id INTEGER NOT NULL REFERENCES auth_accounts(id) ON DELETE CASCADE,
+                project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                PRIMARY KEY (account_id, project_id)
+            )
+        """)
+        # Preserve existing client accounts by linking their projects once.
+        connection.execute("""
+            INSERT OR IGNORE INTO auth_client_projects (account_id, project_id)
+            SELECT a.id, p.id FROM auth_accounts a JOIN projects p
+              ON p.client = a.client_name COLLATE NOCASE
+            WHERE a.role = 'Client / Project Owner'
         """)
         connection.commit()
     finally:
@@ -170,10 +182,46 @@ def client_can_access(project):
     if user["role"] != "Client / Project Owner":
         return True
 
-    return (
-        project is not None
-        and project["client"] == user["client_name"]
-    )
+    if project is None:
+        return False
+    connection = get_connection()
+    try:
+        return connection.execute(
+            "SELECT 1 FROM auth_client_projects WHERE account_id = ? AND project_id = ?",
+            (user["id"], project["id"]),
+        ).fetchone() is not None
+    finally:
+        connection.close()
+
+
+def client_can_access_project_id(project_id):
+    if g.current_user["role"] != "Client / Project Owner":
+        return True
+    connection = get_connection()
+    try:
+        return connection.execute(
+            "SELECT 1 FROM auth_client_projects WHERE account_id = ? AND project_id = ?",
+            (g.current_user["id"], str(project_id)),
+        ).fetchone() is not None
+    finally:
+        connection.close()
+
+
+def validate_app_config(config=None):
+    """Fail clearly before serving if no deployment session secret is set."""
+    secret = (config or app.config).get("SECRET_KEY")
+    if not isinstance(secret, str) or not secret.strip():
+        raise RuntimeError(
+            "BUILDTRACK_SECRET_KEY is required. Set it to a long random value; "
+            "for local development, see README.md."
+        )
+
+
+def json_object():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return None, error_response("Request body must be a JSON object")
+    return data, None
 
 
 def error_response(message, status=400):
@@ -198,7 +246,9 @@ def home():
 
 @app.route("/api/auth/register", methods=["POST"])
 def register():
-    data = request.get_json(silent=True) or {}
+    data, problem = json_object()
+    if problem:
+        return problem
 
     email = str(data.get("email", "")).strip().lower()
     password = str(data.get("password", ""))
@@ -224,20 +274,15 @@ def register():
     finally:
         connection.close()
 
-    # First account must be the initial administrator.
+    user_id = session.get("user_id")
+    current_user = find_user(user_id) if user_id else None
+    if not current_user or current_user["role"] != "Contractor / Admin":
+        return error_response("Only an administrator can create accounts", 403)
+    if role not in ROLES or role == "Contractor / Admin":
+        return error_response("Select a valid non-administrator role")
+
     if account_count == 0:
-        role = "Contractor / Admin"
-    else:
-        user_id = session.get("user_id")
-        current_user = find_user(user_id) if user_id else None
-
-        if not current_user or current_user["role"] != "Contractor / Admin":
-            return error_response(
-                "Only an administrator can create accounts", 403
-            )
-
-        if role not in ROLES:
-            return error_response("Select a valid role")
+        return error_response("Use the controlled initial administrator setup", 403)
 
     if role == "Client / Project Owner":
         if not client_name:
@@ -245,15 +290,20 @@ def register():
 
         connection = get_connection()
         try:
+            requested_projects = data.get("project_ids")
+            if not isinstance(requested_projects, list) or not requested_projects:
+                return error_response("Select at least one project for this client")
+            project_ids = list(set(map(str, requested_projects)))
+            placeholders = ",".join("?" for _ in project_ids)
             exists = connection.execute(
-                "SELECT 1 FROM projects WHERE client = ? LIMIT 1",
-                (client_name,)
-            ).fetchone()
+                f"SELECT COUNT(*) FROM projects WHERE id IN ({placeholders})",
+                tuple(project_ids),
+            ).fetchone()[0]
         finally:
             connection.close()
 
-        if not exists:
-            return error_response("No project is assigned to this client")
+        if exists != len(project_ids):
+            return error_response("One or more selected projects do not exist")
 
     password_hash = generate_password_hash(password)
 
@@ -267,6 +317,11 @@ def register():
         """, (email, password_hash, role, client_name or None))
 
         account_id = cursor.lastrowid
+        if role == "Client / Project Owner":
+            connection.executemany(
+                "INSERT INTO auth_client_projects (account_id, project_id) VALUES (?, ?)",
+                [(account_id, project_id) for project_id in project_ids],
+            )
         connection.commit()
 
     except sqlite3.IntegrityError:
@@ -307,9 +362,56 @@ def register():
     }), 201
 
 
+@app.route("/api/auth/setup-admin", methods=["POST"])
+def setup_initial_admin():
+    data, problem = json_object()
+    if problem:
+        return problem
+    setup_token = os.environ.get("BUILDTRACK_ADMIN_SETUP_TOKEN", "")
+    supplied = request.headers.get("X-Admin-Setup-Token", "")
+    import hmac
+    if not setup_token or not hmac.compare_digest(setup_token, supplied):
+        return error_response("Initial administrator setup is unavailable", 403)
+    connection = get_connection()
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        if connection.execute("SELECT 1 FROM auth_accounts LIMIT 1").fetchone():
+            return error_response("Administrator setup has already been completed", 409)
+        email = str(data.get("email", "")).strip().lower()
+        password = str(data.get("password", ""))
+        name = str(data.get("name", "")).strip()
+        if not email or "@" not in email or len(password) < 8 or not name:
+            return error_response("Valid email, name, and password of at least 8 characters are required")
+        cursor = connection.execute(
+            "INSERT INTO auth_accounts (email, password_hash, role) VALUES (?, ?, ?)",
+            (email, generate_password_hash(password), "Contractor / Admin"),
+        )
+        account_id = cursor.lastrowid
+        connection.commit()
+        try:
+            db.save_record("user_profiles", {
+                "name": name, "role": "Contractor / Admin", "email": email,
+                "avatar": "assets/avatar.svg"
+            }, app.config["DATABASE_PATH"])
+        except Exception:
+            connection.execute("DELETE FROM auth_accounts WHERE id = ?", (account_id,))
+            connection.commit()
+            return error_response("Could not create user profile", 500)
+        return jsonify({"message": "Initial administrator created", "user": {
+            "id": account_id, "name": name, "email": email, "role": "Contractor / Admin"
+        }}), 201
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return error_response("An account with this email already exists", 409)
+    finally:
+        connection.close()
+
+
 @app.route("/api/auth/login", methods=["POST"])
 def login():
-    data = request.get_json(silent=True) or {}
+    data, problem = json_object()
+    if problem:
+        return problem
 
     email = str(data.get("email", "")).strip().lower()
     password = str(data.get("password", ""))
@@ -407,7 +509,10 @@ def get_project_by_id(project_id):
 @app.route("/api/projects", methods=["POST"])
 @roles_required(["Contractor / Admin"])
 def create_project():
-    data = project_to_database(request.get_json(silent=True) or {})
+    payload, problem = json_object()
+    if problem:
+        return problem
+    data = project_to_database(payload)
 
     required = ("name", "client", "location", "manager", "start_date", "expected_completion_date", "budget")
     if any(data.get(field) in (None, "") for field in required):
@@ -436,7 +541,10 @@ def create_project():
 @app.route("/api/projects/<project_id>", methods=["PUT"])
 @roles_required(["Contractor / Admin"])
 def update_project(project_id):
-    data = project_to_database(request.get_json(silent=True) or {})
+    payload, problem = json_object()
+    if problem:
+        return problem
+    data = project_to_database(payload)
     existing = db.get_project(project_id, app.config["DATABASE_PATH"])
 
     if not existing:
@@ -486,6 +594,8 @@ def remove_project(project_id):
 def get_tasks():
     project_id = request.args.get("projectId") or request.args.get("project_id")
     tasks = db.list_records("tasks", project_id=project_id, path=app.config["DATABASE_PATH"])
+    if g.current_user["role"] == "Client / Project Owner":
+        tasks = [task for task in tasks if client_can_access_project_id(task["project_id"])]
 
     return jsonify([task_to_frontend(task) for task in tasks])
 
@@ -497,6 +607,8 @@ def get_task_by_id(task_id):
 
     if not task:
         return error_response("Task not found", 404)
+    if not client_can_access_project_id(task["project_id"]):
+        return error_response("Permission denied", 403)
 
     return jsonify(task_to_frontend(task))
 
@@ -504,7 +616,10 @@ def get_task_by_id(task_id):
 @app.route("/api/tasks", methods=["POST"])
 @roles_required(TASK_WRITE_ROLES)
 def create_task():
-    data = task_to_database(request.get_json(silent=True) or {})
+    payload, problem = json_object()
+    if problem:
+        return problem
+    data = task_to_database(payload)
 
     if not data.get("title") or not data.get("project_id"):
         return error_response("Task title and project ID are required")
@@ -535,11 +650,16 @@ def create_task():
 @app.route("/api/tasks/<task_id>", methods=["PUT"])
 @roles_required(TASK_WRITE_ROLES)
 def update_task(task_id):
-    data = task_to_database(request.get_json(silent=True) or {})
+    payload, problem = json_object()
+    if problem:
+        return problem
+    data = task_to_database(payload)
     existing = db.get_record("tasks", task_id, app.config["DATABASE_PATH"])
 
     if not existing:
         return error_response("Task not found", 404)
+    if not client_can_access_project_id(existing["project_id"]):
+        return error_response("Permission denied", 403)
 
     updates = {
         key: value
@@ -554,6 +674,8 @@ def update_task(task_id):
 
     if not db.get_project(str(project_id), app.config["DATABASE_PATH"]):
         return error_response("The selected project does not exist")
+    if not client_can_access_project_id(project_id):
+        return error_response("Permission denied", 403)
 
     try:
         saved = db.save_record("tasks", {
@@ -568,8 +690,11 @@ def update_task(task_id):
 @app.route("/api/tasks/<task_id>", methods=["DELETE"])
 @roles_required(TASK_WRITE_ROLES)
 def remove_task(task_id):
-    if not db.get_record("tasks", task_id, app.config["DATABASE_PATH"]):
+    task = db.get_record("tasks", task_id, app.config["DATABASE_PATH"])
+    if not task:
         return error_response("Task not found", 404)
+    if not client_can_access_project_id(task["project_id"]):
+        return error_response("Permission denied", 403)
 
     try:
         db.delete_record("tasks", task_id, app.config["DATABASE_PATH"])
@@ -631,4 +756,5 @@ if __name__ == "__main__":
         initialize_auth_table()
         print("Authentication table is ready in the shared database.")
         raise SystemExit(0)
+    validate_app_config()
     app.run(host="127.0.0.1", port=5000, debug=True)

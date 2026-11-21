@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
-from backend.app import app, initialize_auth_table
+from backend.app import app, initialize_auth_table, validate_app_config
 from database import db
 from database.init_db import initialize_database
 
@@ -38,7 +39,10 @@ class BuildTrackApiTests(unittest.TestCase):
         })
 
     def test_registration_login_logout_and_role_permissions(self):
-        first = self.register()
+        with patch.dict("os.environ", {"BUILDTRACK_ADMIN_SETUP_TOKEN": "one-time-secret"}):
+            first = self.client.post("/api/auth/setup-admin", headers={
+                "X-Admin-Setup-Token": "one-time-secret"
+            }, json={"name": "Test User", "email": "admin@example.com", "password": "password123"})
         self.assertEqual(first.status_code, 201)
         self.assertEqual(first.json["user"]["role"], "Contractor / Admin")
         self.client.post("/api/auth/logout")
@@ -60,7 +64,7 @@ class BuildTrackApiTests(unittest.TestCase):
         self.assertEqual(self.client.get("/api/auth/me").status_code, 401)
 
     def test_project_and_task_create_read_update_delete(self):
-        self.assertEqual(self.register().status_code, 201)
+        self.create_initial_admin()
         self.client.post("/api/auth/login", json={"email": "admin@example.com", "password": "password123"})
         created_project = self.create_project()
         self.assertEqual(created_project.status_code, 201)
@@ -92,7 +96,7 @@ class BuildTrackApiTests(unittest.TestCase):
         self.assertEqual(self.client.delete(f"/api/projects/{project['id']}").status_code, 200)
 
     def test_engineer_and_client_role_permissions(self):
-        self.assertEqual(self.register().status_code, 201)
+        self.create_initial_admin()
         self.client.post("/api/auth/login", json={"email": "admin@example.com", "password": "password123"})
         project = self.create_project().json
         self.assertEqual(self.register(email="engineer@example.com", role="Site Engineer / Supervisor").status_code, 201)
@@ -109,11 +113,65 @@ class BuildTrackApiTests(unittest.TestCase):
 
         self.client.post("/api/auth/logout")
         self.client.post("/api/auth/login", json={"email": "admin@example.com", "password": "password123"})
-        self.assertEqual(self.register(email="client@example.com", role="Client / Project Owner", client_name="Example Client").status_code, 201)
+        self.assertEqual(self.register(email="client@example.com", role="Client / Project Owner", client_name="arbitrary", project_ids=[project["id"]]).status_code, 201)
         self.client.post("/api/auth/logout")
         self.client.post("/api/auth/login", json={"email": "client@example.com", "password": "password123"})
         self.assertEqual([row["id"] for row in self.client.get("/api/projects").json], [project["id"]])
-        self.assertEqual(self.client.get("/api/tasks").status_code, 403)
+        self.assertEqual(self.client.get("/api/tasks").status_code, 200)
+
+    def create_initial_admin(self):
+        with patch.dict("os.environ", {"BUILDTRACK_ADMIN_SETUP_TOKEN": "one-time-secret"}):
+            return self.client.post("/api/auth/setup-admin", headers={
+                "X-Admin-Setup-Token": "one-time-secret"
+            }, json={"name": "Admin", "email": "admin@example.com", "password": "password123"})
+
+    def test_public_cannot_obtain_admin_and_initial_setup_is_one_time(self):
+        self.assertEqual(self.register().status_code, 403)
+        self.assertEqual(self.register(email="attacker@example.com", role="Storekeeper").status_code, 403)
+        self.assertEqual(self.create_initial_admin().status_code, 201)
+        self.client.post("/api/auth/login", json={"email": "admin@example.com", "password": "password123"})
+        self.assertEqual(self.register(email="admin2@example.com", role="Contractor / Admin").status_code, 400)
+        self.assertEqual(self.create_initial_admin().status_code, 409)
+
+    def test_client_project_and_task_access_uses_project_ids(self):
+        self.create_initial_admin()
+        self.client.post("/api/auth/login", json={"email": "admin@example.com", "password": "password123"})
+        first = self.create_project("First").json
+        second = self.create_project("Second").json
+        first_task = self.client.post("/api/tasks", json={
+            "projectId": first["id"], "title": "First task", "dueDate": "2026-06-01"
+        })
+        second_task = self.client.post("/api/tasks", json={
+            "projectId": second["id"], "title": "Second task", "dueDate": "2026-06-02"
+        })
+        self.assertEqual(first_task.status_code, 201, first_task.json)
+        self.assertEqual(second_task.status_code, 201, second_task.json)
+        self.register(email="client@example.com", role="Client / Project Owner", client_name="Example Client", project_ids=[first["id"]])
+        self.client.post("/api/auth/logout")
+        self.client.post("/api/auth/login", json={"email": "client@example.com", "password": "password123"})
+        self.assertEqual([p["id"] for p in self.client.get("/api/projects").json], [first["id"]])
+        self.assertEqual(self.client.get(f"/api/projects/{second['id']}").status_code, 403)
+        self.assertEqual(len(self.client.get("/api/tasks").json), 1)
+        task2 = db.list_records("tasks", project_id=second["id"], path=self.database_path)[0]
+        self.assertEqual(self.client.get(f"/api/tasks/{task2['id']}").status_code, 403)
+
+    def test_non_object_json_is_rejected_with_400(self):
+        self.create_initial_admin()
+        self.client.post("/api/auth/login", json={"email": "admin@example.com", "password": "password123"})
+        for body in ("null", "[]", '"text"', "42"):
+            for method, url in (("post", "/api/auth/register"), ("post", "/api/auth/login"),
+                                ("post", "/api/projects"), ("put", "/api/projects/x"),
+                                ("post", "/api/tasks"), ("put", "/api/tasks/x")):
+                response = getattr(self.client, method)(url, data=body, content_type="application/json")
+                self.assertEqual(response.status_code, 400, (body, method, url))
+
+    def test_secret_configuration_validation(self):
+        with self.assertRaisesRegex(RuntimeError, "BUILDTRACK_SECRET_KEY"):
+            validate_app_config({"SECRET_KEY": None})
+        validate_app_config({"SECRET_KEY": "test-only-secret"})
+        self.assertTrue(app.config["SESSION_COOKIE_HTTPONLY"])
+        self.assertEqual(app.config["SESSION_COOKIE_SAMESITE"], "Lax")
+        self.assertTrue(app.config["SESSION_COOKIE_SECURE"])
 
     def test_frontend_module_uses_api_and_production_path_is_shared_file(self):
         root = Path(__file__).resolve().parents[1]
