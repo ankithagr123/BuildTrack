@@ -2,13 +2,20 @@ from flask import Flask, jsonify, request
 import sqlite3
 from pathlib import Path
 from datetime import date, datetime
+from routes.team3_routes import team3_bp, init_team3_tables
+
+BASE_DIR = Path(__file__).resolve().parent
+DATABASE_PATH = BASE_DIR / "buildtrack.db"
 
 app = Flask(__name__)
+app.register_blueprint(team3_bp)
+
+
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
     return response
 
 DATABASE = Path(__file__).parent / "buildtrack.db"
@@ -651,4 +658,5 @@ def get_material_history(material_id):
 # RUN APPLICATION
 if __name__ == "__main__":
     initialize_database()
+    init_team3_tables()
     app.run(debug=True)
